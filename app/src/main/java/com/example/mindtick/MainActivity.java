@@ -85,6 +85,8 @@ public class MainActivity extends AppCompatActivity{
             startActivity(new Intent(this, NewTask.class));
         });
 
+        Toast.makeText(this, "Добро пожаловать!!!", Toast.LENGTH_SHORT).show();
+
     }
 
     // Обработка ответа на запрос разрешений
