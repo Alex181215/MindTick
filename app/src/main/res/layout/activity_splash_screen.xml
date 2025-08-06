@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:background="@color/dark_gray"
+    android:gravity="center"
+    tools:context=".SplashScreenActivity">
+
+
+    <!-- Логотип приложения -->
+    <TextView
+        android:id="@+id/tvAppName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="MindTick"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:textColor="@color/gainsboro"
+        android:layout_centerHorizontal="true"/>
+
+    <!-- Слоган -->
+    <TextView
+        android:id="@+id/tvSlogan"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Time in Your Hands"
+        android:textSize="18sp"
+        android:textColor="@color/gainsboro"
+        android:layout_below="@id/tvAppName"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"/>
+
+</RelativeLayout>
+
+

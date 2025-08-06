@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="CustomSpinnerStyle" parent="Widget.AppCompat.Spinner">
+        <item name="android:popupBackground">@color/dark_gray
+        </item> <!-- Цвет фона выпадающего списка -->
+        <item name="android:textColor">@color/all_text</item> <!-- Цвет текста -->
+        <item name="android:tint">@color/category</item> <!-- Цвет стрелки -->
+        <item name="android:spinnerMode">dropdown
+        </item> <!-- Убираем стандартное поведение стрелки -->
+    </style>
+        <style name="CustomDialog" parent="Theme.AppCompat.Light.Dialog">
+            <!-- Шрифт и размеры текста заголовка -->
+            <item name="android:textSize">14sp</item>
+            <item name="android:textColor">@color/title_text</item>
+
+            <!-- Рамка для диалога и закругление углов -->
+            <item name="android:windowBackground">@drawable/dialog_background</item>
+
+            <!-- Размеры диалога -->
+            <item name="android:windowMinWidthMajor">80%</item>
+            <item name="android:windowMinWidthMinor">80%</item>
+
+            <!-- Настройки для заголовка -->
+            <item name="android:titleTextStyle">@style/CustomDialogTitle</item>
+        </style>
+
+        <!-- Стиль для текста заголовка -->
+        <style name="CustomDialogTitle">
+            <item name="android:textSize">20sp</item>
+            <item name="android:textColor">#0088CC</item>
+        </style>
+</resources>

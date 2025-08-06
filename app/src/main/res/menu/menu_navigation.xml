@@ -1,0 +1,15 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/nav_color_picker"
+        android:title=""
+        app:actionLayout="@layout/color_picker_item"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/nav_switch_notifications"
+        android:title=""
+        app:actionLayout="@layout/switch_item"
+        app:showAsAction="never"/>
+</menu>

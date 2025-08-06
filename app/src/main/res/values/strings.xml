@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">MindTick</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string-array name="category_array">
+        <item>Не выбрано</item>
+        <item>Работа</item>
+        <item>Дом</item>
+        <item>Семья</item>
+        <item>Личное</item>
+        <item>Здоровье</item>
+        <item>Учеба</item>
+        <item>Финансы</item>
+    </string-array>
+
+    <string-array name="sound_profile_array">
+        <item>Не выбрано</item>
+        <item>Тихий</item>
+        <item>Вибро</item>
+        <item>Звук</item>
+        <item>По умолчанию</item>
+    </string-array>
+
+    <string-array name="priorities_array">
+        <item>Не выбрано</item>
+        <item>Высокий</item>
+        <item>Средний</item>
+        <item>Низкий</item>
+    </string-array>
+
+</resources>
