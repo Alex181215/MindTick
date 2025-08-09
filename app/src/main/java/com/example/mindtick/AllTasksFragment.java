@@ -209,20 +209,23 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
     }
 
     private void deleteTask(Task task, int position) {
+        if (getContext() != null) {
+            ReminderHelper.cancelAlarm(getContext(), task);
+        } else {
+            Log.e("TaskAdapter", "Context is null. Cannot cancel alarm.");
+        }
+
         SQLiteDatabase database = db.getWritableDatabase();
         database.delete(Util.TABLE_NAME, Util.KEY_ID + " = ?", new String[]{String.valueOf(task.getId())});
         database.close();
 
-        // Удаляем из списка
         itemList.remove(position);
         recyclerView.getAdapter().notifyItemRemoved(position);
 
-        // Проверяем и удаляем пустую категорию
         checkAndRemoveEmptyCategory(task);
-
-        // Проверяем, пуст ли экран
         checkTasks();
     }
+
 
     // Метод для проверки и удаления пустой категории
     private void checkAndRemoveEmptyCategory(Task task) {

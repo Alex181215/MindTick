@@ -27,6 +27,8 @@ public class ReminderReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        Log.d(TAG, "onReceive вызван с intent: " + intent);
+
         // Извлекаем ID задачи как long
         long taskId = intent.getLongExtra("task_id", -1);  // Используем getLongExtra для получения long значения
         String taskTitle = intent.getStringExtra("task_title");
@@ -34,15 +36,20 @@ public class ReminderReceiver extends BroadcastReceiver {
         // Логируем получение данных
         Log.d(TAG, "Получены данные: task_id = " + taskId + ", task_title = " + taskTitle);
 
+        if (taskId == -1) {
+            Log.w(TAG, "Получен некорректный task_id: -1, отмена обработки.");
+            return;
+        }
+
         // Получаем задачу из базы данных
         DatabaseHandler db = new DatabaseHandler(context);
         Task task = db.getTask(taskId);  // Получаем задачу по ID
         if (task == null) {
-            Log.d(TAG, "Задача с id " + taskId + " не найдена.");
+            Log.w(TAG, "Задача с id " + taskId + " не найдена в базе.");
             return;
         }
 
-        Log.d(TAG, "Задача получена: " + task.getTitle());
+        Log.d(TAG, "Задача получена из базы: " + task.getTitle());
 
         // Создаем намерение для открытия приложения при нажатии на уведомление
         Intent notificationIntent = new Intent(context, MainActivity.class);
@@ -69,8 +76,10 @@ public class ReminderReceiver extends BroadcastReceiver {
         // Получаем NotificationManager для управления уведомлениями
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-// Проверяем, если версия Android 8.0 (O) или выше — необходимо создать канал уведомлений
+        // Проверяем, если версия Android 8.0 (O) или выше — необходимо создать канал уведомлений
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Log.d(TAG, "Создание/проверка notification channel для Android O и выше");
+
             // Создаем канал для уведомлений с высоким приоритетом
             NotificationChannel channel = new NotificationChannel(
                     "reminder_channel",  // Идентификатор канала
@@ -97,9 +106,9 @@ public class ReminderReceiver extends BroadcastReceiver {
 
             // Регистрируем канал в системе
             notificationManager.createNotificationChannel(channel);
+
+            Log.d(TAG, "Notification channel 'reminder_channel' создан или обновлен");
         }
-
-
 
         // Логируем перед отправкой уведомления
         Log.d(TAG, "Отправка уведомления для задачи: " + task.getTitle());
@@ -107,9 +116,13 @@ public class ReminderReceiver extends BroadcastReceiver {
         // Отправляем уведомление
         if (notificationManager != null) {
             notificationManager.notify((int) taskId, builder.build());  // Используем (int) taskId для идентификатора уведомления
-            Log.d(TAG, "Уведомление отправлено для задачи с id: " + taskId);
+            Log.d(TAG, "Уведомление успешно отправлено для задачи с id: " + taskId);
+
+            // Удаляем запись из DirectBoot prefs после успешного уведомления
+            ReminderHelper.removeReminderFromDirectBoot(context, taskId);
+            Log.d(TAG, "Удалил запись из DirectBoot после срабатывания для задачи id=" + taskId);
         } else {
-            Log.e(TAG, "Ошибка: NotificationManager не доступен");
+            Log.e(TAG, "Ошибка: NotificationManager не доступен, уведомление не отправлено");
         }
     }
 }

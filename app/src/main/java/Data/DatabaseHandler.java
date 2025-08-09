@@ -7,22 +7,24 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 import Model.Task;
 import Utils.Util;
 
 public class DatabaseHandler extends SQLiteOpenHelper {
+
+    private static final String TAG = "DatabaseHandler";
+
     public DatabaseHandler(Context context) {
         super(context, Util.DATABASE_NAME, null, Util.DATABASE_VERSION);
+        Log.d(TAG, "DatabaseHandler создан");
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
+        Log.d(TAG, "onCreate вызван - создаём таблицу");
         String CREATE_TASKS_TABLE = "CREATE TABLE " + Util.TABLE_NAME + "(" +
                 Util.KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
                 Util.KEY_TITLE + " TEXT," +
@@ -37,37 +39,39 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 Util.KEY_PREVIOUS_REMINDER_ENABLED + " INTEGER DEFAULT 0" +
                 ")";
         db.execSQL(CREATE_TASKS_TABLE);
+        Log.d(TAG, "Таблица создана");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        Log.d(TAG, "onUpgrade вызван: oldVersion = " + oldVersion + ", newVersion = " + newVersion);
         if (oldVersion < 2) {
             db.execSQL("ALTER TABLE tasks ADD COLUMN reminderEnabled INTEGER DEFAULT 0;");
+            Log.d(TAG, "Добавлен столбец reminderEnabled");
         }
     }
 
-    private static final int DATABASE_VERSION = 2;  // Увеличиваем версию базы данных
-
-
     public void updateTask(Task task) {
+        Log.d(TAG, "updateTask вызван для задачи с id: " + task.getId());
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put("title", task.getTitle());
         values.put("description", task.getDescription());
-       // values.put("status", task.getStatus());
+        // values.put("status", task.getStatus()); // раскомментируй, если нужно
         values.put("date", task.getDate());
         values.put("time", task.getTime());
-       // values.put("reminderEnabled", task.getReminderEnabled());  // Здесь обновляем reminderEnabled
+        // values.put("reminderEnabled", task.getReminderEnabled()); // если надо обновлять
         values.put("priority", task.getPriority());
         values.put("category", task.getCategory());
 
-        db.update("tasks", values, "id = ?", new String[]{String.valueOf(task.getId())});
+        int rowsAffected = db.update("tasks", values, "id = ?", new String[]{String.valueOf(task.getId())});
+        Log.d(TAG, "Обновлено строк: " + rowsAffected);
+        db.close();
     }
-
 
     public long addTask(Task task) {
         SQLiteDatabase db = null;
-        long taskId = -1;  // Переменная для хранения ID задачи
+        long taskId = -1;
         try {
             db = this.getWritableDatabase();
             ContentValues values = new ContentValues();
@@ -81,29 +85,26 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             values.put(Util.KEY_REMINDER_ENABLED, task.getReminderEnabled());
             values.put(Util.KEY_PREVIOUS_REMINDER_ENABLED, task.getReminderEnabled()); // сохраняем и как "предыдущее"
 
-            // Вставляем задачу в таблицу и получаем ID вставленной строки
             taskId = db.insertOrThrow(Util.TABLE_NAME, null, values);
 
-            // Логируем
-            Log.d("DatabaseHandler", "Задача добавлена: " + task.getTitle());
-            Log.d("DatabaseHandler", "Добавляем задачу: " + task.getTitle());
-            Log.d("DatabaseHandler", "Дата при сохранении: " + task.getDate());
-            Log.d("DatabaseHandler", "SQL-вставка: " + task.getTitle() + ", Напоминание: " + task.getReminderEnabled());
+            Log.d(TAG, "Задача добавлена: " + task.getTitle() + ", id: " + taskId);
+            Log.d(TAG, "Дата при сохранении: " + task.getDate() + ", reminderEnabled: " + task.getReminderEnabled());
 
         } catch (Exception e) {
-            Log.e("DatabaseHandler", "Ошибка при добавлении задачи: " + e.getMessage());
+            Log.e(TAG, "Ошибка при добавлении задачи: " + e.getMessage(), e);
         } finally {
             if (db != null) db.close();
         }
-        return taskId;  // Возвращаем ID вставленной задачи
+        return taskId;
     }
 
-
     public Task getTask(long taskId) {
+        Log.d(TAG, "getTask вызван для id: " + taskId);
         SQLiteDatabase db = this.getReadableDatabase();
+
         Cursor cursor = db.query(
                 Util.TABLE_NAME,
-                null, // все поля
+                null,
                 Util.KEY_ID + " = ?",
                 new String[]{String.valueOf(taskId)},
                 null, null, null);
@@ -111,7 +112,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         if (cursor != null) {
             if (cursor.moveToFirst()) {
                 Task task = new Task();
-                task.setId(cursor.getLong(cursor.getColumnIndex(Util.KEY_ID)));  // Используем getLong
+                task.setId(cursor.getLong(cursor.getColumnIndex(Util.KEY_ID)));
                 task.setTitle(cursor.getString(cursor.getColumnIndex(Util.KEY_TITLE)));
                 task.setCategory(cursor.getString(cursor.getColumnIndex(Util.KEY_CATEGORY)));
                 task.setDate(cursor.getString(cursor.getColumnIndex(Util.KEY_DATE)));
@@ -122,22 +123,26 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 task.setReminderEnabled(cursor.getInt(cursor.getColumnIndex(Util.KEY_REMINDER_ENABLED)));
                 task.setCompletedAt(cursor.getString(cursor.getColumnIndex(Util.KEY_COMPLETED_AT)));
 
-                // Аккуратная проверка — если поле есть, то устанавливаем
                 int prevReminderIndex = cursor.getColumnIndex(Util.KEY_PREVIOUS_REMINDER_ENABLED);
                 if (prevReminderIndex != -1) {
                     task.setPreviousReminderEnabled(cursor.getInt(prevReminderIndex));
                 }
 
                 cursor.close();
+                db.close();
+                Log.d(TAG, "Задача успешно получена: " + task.getTitle());
                 return task;
             }
             cursor.close();
         }
 
-        return null; // Если задача не найдена
+        db.close();
+        Log.w(TAG, "Задача с id " + taskId + " не найдена");
+        return null;
     }
 
     public List<Task> getAllTasks() {
+        Log.d(TAG, "getAllTasks вызван");
         List<Task> taskList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
 
@@ -154,7 +159,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         if (cursor != null && cursor.moveToFirst()) {
             do {
                 Task task = new Task();
-                task.setId(cursor.getLong(cursor.getColumnIndexOrThrow(Util.KEY_ID)));  // Используем getLong
+                task.setId(cursor.getLong(cursor.getColumnIndexOrThrow(Util.KEY_ID)));
                 task.setTitle(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_TITLE)));
                 task.setCategory(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_CATEGORY)));
                 task.setDescription(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_DESCRIPTION)));
@@ -164,17 +169,18 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 task.setStatus(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_STATUS)));
                 task.setReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_REMINDER_ENABLED)));
 
-                // Добавляем недостающее поле
                 task.setPreviousReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_PREVIOUS_REMINDER_ENABLED)));
 
                 taskList.add(task);
             } while (cursor.moveToNext());
 
             cursor.close();
+        } else {
+            Log.w(TAG, "getAllTasks: курсор пуст или null");
         }
 
         db.close();
+        Log.d(TAG, "getAllTasks возвращает " + taskList.size() + " задач");
         return taskList;
     }
 }
-

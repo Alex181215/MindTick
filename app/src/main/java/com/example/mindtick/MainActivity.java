@@ -2,6 +2,8 @@ package com.example.mindtick;
 
 import static java.security.AccessController.getContext;
 
+import android.app.AlertDialog;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -9,8 +11,10 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.MenuItem;
 import android.view.View;
@@ -51,6 +55,20 @@ public class MainActivity extends AppCompatActivity{
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+
+
+        // Проверяем, показывали ли уже диалог с разрешениями
+        SharedPreferences prefs = getSharedPreferences("app_settings", MODE_PRIVATE);
+        boolean shown = prefs.getBoolean("permissions_dialog_shown", false);
+        if (!shown) {
+            showPermissionsDialog();
+
+            // Сохраняем, что диалог уже показан
+            prefs.edit().putBoolean("permissions_dialog_shown", true).apply();
+        }
+
+
         b = ActivityMainBinding.inflate(getLayoutInflater());
         View v = b.getRoot();
         setContentView(v);
@@ -84,9 +102,6 @@ public class MainActivity extends AppCompatActivity{
         b.btnAddTask.setOnClickListener(view -> {
             startActivity(new Intent(this, NewTask.class));
         });
-
-        Toast.makeText(this, "Пробуем еще раз!!!", Toast.LENGTH_SHORT).show();
-
     }
 
     // Обработка ответа на запрос разрешений
@@ -115,6 +130,64 @@ public class MainActivity extends AppCompatActivity{
             }
         }
     }
+
+
+    private void showPermissionsDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Настройки для корректной работы")
+                .setMessage("Чтобы напоминания работали всегда, включите автозапуск, фон и отключите экономию батареи.")
+                .setPositiveButton("Сделать сейчас", (dialog, which) -> {
+                    requestIgnoreBatteryOptimizations();
+                    openAutoStartSettings();
+
+                    // Сохраняем, что уже показывали
+                    SharedPreferences prefs = getSharedPreferences("app_settings", MODE_PRIVATE);
+                    prefs.edit().putBoolean("permissions_dialog_shown", true).apply();
+                })
+                .setNegativeButton("Позже", (dialog, which) -> {
+                    SharedPreferences prefs = getSharedPreferences("app_settings", MODE_PRIVATE);
+                    prefs.edit().putBoolean("permissions_dialog_shown", true).apply();
+                })
+                .show();
+    }
+
+    private void requestIgnoreBatteryOptimizations() {
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+            Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        }
+    }
+
+    private void openAutoStartSettings() {
+        try {
+            Intent intent = new Intent();
+            String manufacturer = android.os.Build.MANUFACTURER.toLowerCase();
+            if (manufacturer.contains("xiaomi")) {
+                intent.setComponent(new ComponentName(
+                        "com.miui.securitycenter",
+                        "com.miui.permcenter.autostart.AutoStartManagementActivity"
+                ));
+            } else if (manufacturer.contains("realme") || manufacturer.contains("oppo")) {
+                intent.setComponent(new ComponentName(
+                        "com.coloros.safecenter",
+                        "com.coloros.safecenter.startupapp.StartupAppListActivity"
+                ));
+            } else if (manufacturer.contains("huawei")) {
+                intent.setComponent(new ComponentName(
+                        "com.huawei.systemmanager",
+                        "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"
+                ));
+            }
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, "Откройте настройки автозапуска вручную", Toast.LENGTH_LONG).show();
+        }
+    }
+
+
+
     private boolean hasTasksForToday() {
         // Получаем доступ к базе данных через DatabaseHandler
         DatabaseHandler dbHandler = new DatabaseHandler(this);  // getContext() вернет контекст фрагмента

@@ -278,6 +278,16 @@ public class TaskBottomSheetDialogFragment extends BottomSheetDialogFragment {
                 Log.d("DatabaseHandler", "Задача обновлена: " + task.getTitle() + ", ID: " + task.getId());
             }
 
+            // Обновляем будильник:
+            ReminderHelper.cancelAlarm(getContext(), task); // Отменяем старое (на всякий случай)
+            if (task.getReminderEnabled() == 1 && !task.getDate().isEmpty() && !task.getTime().isEmpty()) {
+                SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
+                Date dateTime = dateFormat.parse(task.getDate() + " " + task.getTime());
+                if (dateTime != null && dateTime.after(new Date())) {
+                    ReminderHelper.setAlarm(getContext(), task);
+                }
+            }
+
             // Показываем сообщение пользователю
             Toast.makeText(getContext(), "Задача сохранена!", Toast.LENGTH_SHORT).show();
             dismiss();

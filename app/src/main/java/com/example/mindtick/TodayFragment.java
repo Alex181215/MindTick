@@ -217,6 +217,14 @@ public class TodayFragment extends Fragment implements OnTaskUpdatedListener {
     }
 
     private void deleteTask(Task task, int position) {
+        // Сначала отменяем напоминание
+        if (getContext() != null) {
+            ReminderHelper.cancelAlarm(getContext(), task);
+        } else {
+            Log.e("TaskAdapter", "Context is null. Cannot cancel alarm.");
+        }
+
+        // Удаляем из базы
         SQLiteDatabase database = db.getWritableDatabase();
         database.delete(Util.TABLE_NAME, Util.KEY_ID + " = ?", new String[]{String.valueOf(task.getId())});
         database.close();
