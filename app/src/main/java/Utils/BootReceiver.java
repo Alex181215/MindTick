@@ -125,6 +125,8 @@ public class BootReceiver extends BroadcastReceiver {
     }
 
     // Отдельный канал + уведомление для пропущенных задач
+// Внутри класса BootReceiver
+
     private void showMissedNotification(Context context, Task task) {
         try {
             NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -143,16 +145,37 @@ public class BootReceiver extends BroadcastReceiver {
                 channel.setDescription("Уведомления о напоминаниях, которые не сработали до перезагрузки");
                 channel.enableVibration(true);
                 channel.setLightColor(0xFFFF0000);
-                // звук канала можно оставить по умолчанию — если нужно, можно выставить Settings.System.DEFAULT_NOTIFICATION_URI
                 nm.createNotificationChannel(channel);
             }
 
-            Intent intent = new Intent(context, MainActivity.class);
-            intent.putExtra("task_id", task.getId());
+            Intent mainIntent = new Intent(context, MainActivity.class);
+            mainIntent.putExtra("task_id", task.getId());
             PendingIntent pendingIntent = PendingIntent.getActivity(
                     context,
                     (int) task.getId(),
-                    intent,
+                    mainIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            // Intent для кнопки "Отложить"
+            Intent snoozeIntent = new Intent(context, ReminderActionReceiver.class);
+            snoozeIntent.setAction("ACTION_SNOOZE");
+            snoozeIntent.putExtra("task_id", task.getId());
+            PendingIntent snoozePendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    (int) task.getId(),
+                    snoozeIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            // Intent для кнопки "Выполнено"
+            Intent doneIntent = new Intent(context, ReminderActionReceiver.class);
+            doneIntent.setAction("ACTION_DONE");
+            doneIntent.putExtra("task_id", task.getId());
+            PendingIntent donePendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    (int) task.getId() + 100000, // уникальный requestCode
+                    doneIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
             );
 
@@ -164,7 +187,10 @@ public class BootReceiver extends BroadcastReceiver {
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                    .setDefaults(NotificationCompat.DEFAULT_ALL);
+                    .setDefaults(NotificationCompat.DEFAULT_ALL)
+                    // Добавляем кнопки с действиями
+                    .addAction(R.drawable.baseline_calendar_today_24, "Отложить", snoozePendingIntent)
+                    .addAction(R.drawable.baseline_notifications_active_24w, "Выполнено", donePendingIntent);
 
             nm.notify((int) task.getId(), builder.build());
         } catch (Exception e) {
