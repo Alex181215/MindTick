@@ -254,36 +254,64 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
             }
 
-            taskHolder.switchReminder.setChecked(task.getReminderEnabled() == 1);
+            taskHolder.switchReminder.setOnCheckedChangeListener(null); // Отключаем слушатель временно
+            taskHolder.switchReminder.setChecked(task.getReminderEnabled() == 1); // Устанавливаем текущее значение
 
             taskHolder.switchReminder.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isTaskOverdue(task.getDate(), task.getTime())) {
-                    // Если задача просрочена, показываем сообщение и не разрешаем включить напоминание
+                // Получить свежую задачу из базы
+                Task freshTask = db.getTask(task.getId());
+                if (freshTask == null) {
+                    Log.e("TaskAdapter", "Ошибка: не удалось получить задачу из базы при переключении напоминания");
+                    Toast.makeText(context, "Ошибка при установке напоминания", Toast.LENGTH_SHORT).show();
+                    taskHolder.switchReminder.setChecked(false);
+                    return;
+                }
+
+                Log.d("TaskAdapter", "switchReminder toggled: " + isChecked +
+                        " for task id: " + freshTask.getId() +
+                        ", title: " + freshTask.getTitle() +
+                        ", reminder time: " + freshTask.getDate() + " " + freshTask.getTime());
+
+                // Проверка на просрочку
+                if (isTaskOverdue(freshTask.getDate(), freshTask.getTime())) {
                     Toast.makeText(context, "Напоминание для просроченной задачи невозможно!", Toast.LENGTH_SHORT).show();
-                    taskHolder.switchReminder.setChecked(false); // Снимаем переключатель
-                    return; // Не выполняем дальнейшие действия
+                    Log.d("TaskAdapter", "Cannot enable reminder - task is overdue");
+                    taskHolder.switchReminder.setChecked(false);
+                    return;
                 }
 
                 if (isChecked) {
-                    if (task.getDate() == null || task.getDate().isEmpty() ||
-                            task.getTime() == null || task.getTime().isEmpty()) {
-                        // Если дата/время не установлены, показываем диалог
-                        showDateTimeDialog(task, taskHolder);
+                    // Если нет даты или времени — показываем диалог
+                    if (freshTask.getDate() == null || freshTask.getDate().isEmpty() ||
+                            freshTask.getTime() == null || freshTask.getTime().isEmpty()) {
+                        Log.d("TaskAdapter", "Reminder enable requested, but date/time not set - showing dialog");
+                        showDateTimeDialog(freshTask, taskHolder);
                         return;
                     }
-                    // Устанавливаем напоминание
-                    ReminderHelper.setAlarm(context, task);
+
+                    // Обновляем флаг
+                    freshTask.setReminderEnabled(1);
+
+                    // Ставим будильник
+                    Log.d("TaskAdapter", "Setting alarm for task id " + freshTask.getId());
+                    ReminderHelper.setAlarm(context, freshTask);
                 } else {
-                    // Отменяем напоминание
-                    ReminderHelper.cancelAlarm(context, task);
+                    // Отключаем напоминание
+                    Log.d("TaskAdapter", "Cancelling alarm for task id " + freshTask.getId());
+                    ReminderHelper.cancelAlarm(context, freshTask);
+                    freshTask.setReminderEnabled(0);
                 }
 
+                // Сохраняем изменения в базе
                 SQLiteDatabase database = db.getWritableDatabase();
                 ContentValues values = new ContentValues();
                 values.put(Util.KEY_REMINDER_ENABLED, isChecked ? 1 : 0);
-                database.update(Util.TABLE_NAME, values, Util.KEY_ID + " = ?", new String[]{String.valueOf(task.getId())});
+                int rowsUpdated = database.update(Util.TABLE_NAME, values, Util.KEY_ID + " = ?", new String[]{String.valueOf(freshTask.getId())});
+                Log.d("TaskAdapter", "Database updated rows: " + rowsUpdated + " for task id " + freshTask.getId());
                 database.close();
             });
+
+
         }
     }
 
