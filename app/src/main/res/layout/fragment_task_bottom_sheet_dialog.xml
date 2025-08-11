@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:layout_margin="16dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="4dp"
     android:background="@color/dark_gray"
     android:padding="0dp"
     tools:context=".NewTask">
@@ -33,7 +36,6 @@
                 android:background="@color/card_color"
                 android:orientation="vertical"
                 android:padding="8dp">
-
 
                 <LinearLayout
                     android:id="@+id/dateAndTime"
@@ -292,4 +294,4 @@
         </androidx.cardview.widget.CardView>
 
     </ScrollView>
-</RelativeLayout>
+</androidx.cardview.widget.CardView>
