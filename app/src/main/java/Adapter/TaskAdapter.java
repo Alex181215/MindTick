@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -85,28 +86,39 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         AlertDialog dialog = new AlertDialog.Builder(context, R.style.CustomDialog)
                 .setMessage("Чтобы включить напоминание, нужно установить дату и время. Добавить их сейчас?")
                 .setPositiveButton("Добавить", (dialog1, which) -> {
-                    // Открыть экран редактирования с активированными пикерами
-                    Intent intent = new Intent(context, NewTask.class); // Пример для перехода
-                    intent.putExtra("taskId", task.getId());  // Передаем ID задачи
-                    context.startActivity(intent);
+                    // Открываем BottomSheet редактирования задачи с флагом для автозапуска пикеров
+                    TaskBottomSheetDialogFragment bottomSheet = TaskBottomSheetDialogFragment.newInstance(task);
+
+                    Bundle args = bottomSheet.getArguments();
+                    if (args == null) args = new Bundle();
+                    args.putBoolean("openDateTimePicker", true); // наш флаг
+                    bottomSheet.setArguments(args);
+
+                    bottomSheet.setOnTaskUpdatedListener(() -> {
+                        if (onTaskUpdatedListener != null) {
+                            onTaskUpdatedListener.onTaskUpdated();
+                        }
+                    });
+
+                    // Открываем фрагмент
+                    FragmentManager fragmentManager = parentFragment.getParentFragmentManager();
+                    bottomSheet.show(fragmentManager, bottomSheet.getTag());
                 })
                 .setNegativeButton("Отменить", (dialog12, which) -> {
-                    // Не делаем ничего, просто сбрасываем переключатель
+                    // Сбрасываем переключатель
                     taskHolder.switchReminder.setChecked(false);
                 })
                 .create();
 
         dialog.setOnShowListener(dialog1 -> {
-            // Получаем цвета из ресурсов
+            // Цвета
             int positiveColor = ContextCompat.getColor(context, R.color.all_text);
             int negativeColor = ContextCompat.getColor(context, R.color.all_text);
             int messageColor = ContextCompat.getColor(context, R.color.title_text);
 
-            // После показа диалога меняем цвет кнопок
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(positiveColor);  // "Добавить"
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(negativeColor); // "Отменить"
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(positiveColor);
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(negativeColor);
 
-            // Меняем цвет текста сообщения
             TextView messageView = dialog.findViewById(android.R.id.message);
             if (messageView != null) {
                 messageView.setTextColor(messageColor);
@@ -115,6 +127,7 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         dialog.show();
     }
+
 
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
