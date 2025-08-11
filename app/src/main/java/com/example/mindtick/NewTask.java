@@ -369,4 +369,9 @@ public class NewTask extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        finish();
+        overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
+    }
 }

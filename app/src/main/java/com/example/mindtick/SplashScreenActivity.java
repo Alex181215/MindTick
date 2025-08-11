@@ -49,6 +49,7 @@ public class SplashScreenActivity extends Activity {
         // Переход к главному экрану через 3 секунды
         new Handler().postDelayed(() -> {
             startActivity(new Intent(SplashScreenActivity.this, MainActivity.class));
+            overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
             finish();
         }, 1000);
     }

@@ -56,8 +56,6 @@ public class MainActivity extends AppCompatActivity{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
-
         // Проверяем, показывали ли уже диалог с разрешениями
         SharedPreferences prefs = getSharedPreferences("app_settings", MODE_PRIVATE);
         boolean shown = prefs.getBoolean("permissions_dialog_shown", false);
@@ -80,15 +78,17 @@ public class MainActivity extends AppCompatActivity{
 
         b.btnSettings.setOnClickListener(view -> drawerLayout.openDrawer(GravityCompat.END));
 
-        // Если приложение открылось после сплэшскрина, проверяем есть ли активные задачи на сегодня
-        boolean isTaskForToday = hasTasksForToday();
+        loadFragment(new TodayFragment(), "TodayFragment");
 
-// Если передан Intent, используем его значение, иначе проверяем наличие задач на сегодня
+        // Если приложение открылось после сплэшскрина, проверяем есть ли активные задачи на сегодня
+        boolean isTaskForToday = true;
+
+        // Если передан Intent, используем его значение, иначе проверяем наличие задач на сегодня
         if (getIntent().hasExtra("isTaskForToday")) {
             isTaskForToday = getIntent().getBooleanExtra("isTaskForToday", false);
         }
 
-// Переход на нужный фрагмент в зависимости от полученного значения
+        // Переход на нужный фрагмент в зависимости от полученного значения
         if (isTaskForToday) {
             loadFragment(new TodayFragment(), "TodayFragment");
         } else {
@@ -101,6 +101,7 @@ public class MainActivity extends AppCompatActivity{
 
         b.btnAddTask.setOnClickListener(view -> {
             startActivity(new Intent(this, NewTask.class));
+            overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
         });
     }
 
@@ -118,6 +119,7 @@ public class MainActivity extends AppCompatActivity{
                 Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                         .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
                 startActivity(intent);
+                overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
             }
         }
 
@@ -157,6 +159,7 @@ public class MainActivity extends AppCompatActivity{
             Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
             intent.setData(Uri.parse("package:" + getPackageName()));
             startActivity(intent);
+            overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
         }
     }
 
@@ -181,6 +184,7 @@ public class MainActivity extends AppCompatActivity{
                 ));
             }
             startActivity(intent);
+            overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
         } catch (Exception e) {
             Toast.makeText(this, "Откройте настройки автозапуска вручную", Toast.LENGTH_LONG).show();
         }
@@ -215,8 +219,16 @@ public class MainActivity extends AppCompatActivity{
     private void loadFragment(Fragment fragment, String imageText) {
         // Начинаем транзакцию
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+
+        transaction.setCustomAnimations(
+                R.anim.fade_in_activity,  // анимация появления фрагмента
+                R.anim.fade_out_activity, // анимация исчезновения при замене
+                R.anim.fade_in_activity,  // анимация появления при возврате назад
+                R.anim.fade_out_activity  // анимация исчезновения при возврате назад
+        );
+
         // Заменяем текущий фрагмент
-        transaction.replace(R.id.fragment_container, fragment);
+        transaction.replace(R.id.fragment_container, fragment, imageText);
         // Добавляем транзакцию в стек для возможности возврата
         transaction.addToBackStack(null);
         // Применяем изменения
@@ -303,7 +315,40 @@ public class MainActivity extends AppCompatActivity{
                 Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
+                overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
             }
         }
     }
+
+    @Override
+    public void onBackPressed() {
+        String currentFragmentTag = getCurrentFragmentTag(); // метод, который возвращает тэг текущего фрагмента
+
+        switch (currentFragmentTag) {
+            case "DoneFragment": // Выполнено
+                loadFragment(new AllTasksFragment(), "AllTasksFragment");
+                break;
+
+            case "AllTasksFragment": // Все задачи
+                loadFragment(new TodayFragment(), "TodayFragment");
+                break;
+
+            case "TodayFragment": // Сегодня
+                moveTaskToBack(true); // сворачиваем приложение
+                break;
+
+            default:
+                super.onBackPressed();
+        }
+    }
+
+    private String getCurrentFragmentTag() {
+        Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+        if (currentFragment != null) {
+            return currentFragment.getTag();
+        }
+        return null;
+    }
+
+
 }
