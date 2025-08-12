@@ -87,7 +87,7 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private void showDateTimeDialog(Task task, TaskViewHolder taskHolder) {
         AlertDialog dialog = new AlertDialog.Builder(context, R.style.CustomDialog)
                 .setMessage("Чтобы включить напоминание, нужно установить дату и время. Добавить их сейчас?")
-                .setPositiveButton("Добавить", (dialog1, which) -> {
+                .setPositiveButton("Да", (dialog1, which) -> {
                     String returnFragmentTag;
 
                     if (isTodayScreen) {
@@ -105,7 +105,7 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     ((Activity) context).overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
                     taskHolder.switchReminder.setChecked(false);
                 })
-                .setNegativeButton("Отменить", (dialog12, which) -> {
+                .setNegativeButton("Отмена", (dialog12, which) -> {
                     // Сбрасываем переключатель
                     taskHolder.switchReminder.setChecked(false);
                 })
