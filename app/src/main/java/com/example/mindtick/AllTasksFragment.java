@@ -23,6 +23,7 @@ import android.widget.TextView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -274,13 +275,17 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
                 task.setTime(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_TIME)));
                 task.setDescription(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_DESCRIPTION)));
 
-                // ЗАГРУЖАЕМ ПРИОРИТЕТ
+                // Загружаем приоритет
                 task.setPriority(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_PRIORITY)));
 
-                task.setReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_REMINDER_ENABLED)));  // Прямое присваивание
+                task.setReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_REMINDER_ENABLED)));
 
-                // Группируем задачи по категориям
+                // Обрабатываем пустую категорию
                 String category = task.getCategory();
+                if (category == null || category.isEmpty()) {
+                    category = "Без категории";
+                }
+
                 if (!categoryMap.containsKey(category)) {
                     categoryMap.put(category, new ArrayList<>());
                 }
@@ -290,38 +295,53 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
         }
         database.close();
 
-        // Сортируем задачи внутри каждой категории по дате и времени
-        for (String category : categoryMap.keySet()) {
+        // Сортируем категории: "Без категории" — первая, остальные по алфавиту
+        List<String> sortedCategories = new ArrayList<>(categoryMap.keySet());
+        Collections.sort(sortedCategories, String.CASE_INSENSITIVE_ORDER);
+
+        final String noCategory = "Без категории";
+        if (sortedCategories.contains(noCategory)) {
+            sortedCategories.remove(noCategory);
+            sortedCategories.add(0, noCategory);
+        }
+
+        // Перебираем отсортированные категории
+        for (String category : sortedCategories) {
             List<Task> tasks = categoryMap.get(category);
 
-            // Сортировка по дате и времени
+            // Сортируем задачи внутри категории по твоей логике
             tasks.sort((task1, task2) -> {
-                if (task1.getDate() != null && task2.getDate() != null) {
-                    int dateComparison = task1.getDate().compareTo(task2.getDate());
-                    if (dateComparison == 0) {
-                        // Если даты одинаковые, сортируем по времени
-                        if (task1.getTime() != null && task2.getTime() != null) {
-                            return task1.getTime().compareTo(task2.getTime());
-                        } else if (task1.getTime() == null || task1.getTime().isEmpty()) {
-                            return 1; // Задачи без времени идут ниже
-                        } else {
-                            return -1; // Задачи с временем идут выше
-                        }
-                    }
-                    return dateComparison;
-                } else if (task1.getDate() == null || task1.getDate().isEmpty()) {
-                    return 1; // Задачи без даты идут вниз
-                } else {
-                    return -1; // Задачи с датой идут выше
-                }
+                boolean t1NoDate = task1.getDate() == null || task1.getDate().isEmpty();
+                boolean t2NoDate = task2.getDate() == null || task2.getDate().isEmpty();
+
+                // 1. Без даты выше
+                if (t1NoDate && !t2NoDate) return -1;
+                if (!t1NoDate && t2NoDate) return 1;
+                if (t1NoDate && t2NoDate) return 0;
+
+                // 2. Сравниваем даты (если обе с датой)
+                int dateComparison = task1.getDate().compareTo(task2.getDate());
+                if (dateComparison != 0) return dateComparison;
+
+                // 3. Внутри одинаковой даты — задачи без времени выше
+                boolean t1NoTime = task1.getTime() == null || task1.getTime().isEmpty();
+                boolean t2NoTime = task2.getTime() == null || task2.getTime().isEmpty();
+
+                if (t1NoTime && !t2NoTime) return -1;
+                if (!t1NoTime && t2NoTime) return 1;
+                if (t1NoTime && t2NoTime) return 0;
+
+                // 4. Если обе с временем — сортируем по времени
+                return task1.getTime().compareTo(task2.getTime());
             });
 
-            // Добавляем заголовок категории и задачи
-            itemList.add(category); // Заголовок
-            itemList.addAll(tasks); // Все задачи из этой категории
+            itemList.add(category); // Заголовок категории
+            itemList.addAll(tasks); // Все задачи из категории
         }
+
         checkTasks();
     }
+
 
     private void checkTasks() {
         if (itemList.isEmpty()) {

@@ -246,7 +246,7 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 // Экран "Все задачи"
                 if (task.getDate() != null && !task.getDate().isEmpty()) {
                     if (task.getTime() != null && !task.getTime().isEmpty()) {
-                        taskHolder.tvNextExecutionTime.setText(task.getTime() + "  " + task.getDate());
+                        taskHolder.tvNextExecutionTime.setText(task.getDate() + " " + task.getTime());
                     } else {
                         taskHolder.tvNextExecutionTime.setText(task.getDate());
                     }

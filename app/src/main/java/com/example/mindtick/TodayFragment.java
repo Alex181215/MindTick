@@ -26,6 +26,7 @@ import android.widget.TextView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -275,7 +276,8 @@ public class TodayFragment extends Fragment implements OnTaskUpdatedListener {
         SQLiteDatabase database = db.getReadableDatabase();
 
         // Выбираем только активные задачи на сегодня
-        Cursor cursor = database.query(Util.TABLE_NAME, null, Util.KEY_DATE + " = ? AND " + Util.KEY_STATUS + " = ?",
+        Cursor cursor = database.query(Util.TABLE_NAME, null,
+                Util.KEY_DATE + " = ? AND " + Util.KEY_STATUS + " = ?",
                 new String[]{today, "1"}, null, null, Util.KEY_CATEGORY);
 
         if (cursor != null && cursor.moveToFirst()) {
@@ -288,13 +290,16 @@ public class TodayFragment extends Fragment implements OnTaskUpdatedListener {
                 task.setTime(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_TIME)));
                 task.setDescription(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_DESCRIPTION)));
 
-                // ЗАГРУЖАЕМ ПРИОРИТЕТ
+                // Загружаем приоритет
                 task.setPriority(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_PRIORITY)));
 
-                task.setReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_REMINDER_ENABLED)));  // Прямое присваивание
+                task.setReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_REMINDER_ENABLED)));
 
                 // Группируем задачи по категориям
                 String category = task.getCategory();
+                if (category == null || category.isEmpty()) {
+                    category = "Без категории";  // Обозначаем пустую категорию
+                }
                 if (!categoryMap.containsKey(category)) {
                     categoryMap.put(category, new ArrayList<>());
                 }
@@ -304,25 +309,38 @@ public class TodayFragment extends Fragment implements OnTaskUpdatedListener {
         }
         database.close();
 
-        // Сортируем задачи внутри каждой категории по времени
-        for (String category : categoryMap.keySet()) {
+        // Сортируем категории по алфавиту (без учета регистра)
+        List<String> sortedCategories = new ArrayList<>(categoryMap.keySet());
+        Collections.sort(sortedCategories, String.CASE_INSENSITIVE_ORDER);
+
+        // Если категория "Без категории" есть — ставим её в начало списка
+        final String noCategory = "Без категории";
+        if (sortedCategories.contains(noCategory)) {
+            sortedCategories.remove(noCategory);
+            sortedCategories.add(0, noCategory);
+        }
+
+        // Добавляем задачи в itemList по отсортированным категориям
+        for (String category : sortedCategories) {
             List<Task> tasks = categoryMap.get(category);
 
-            // Сортировка по времени
+            // Сортируем задачи внутри категории:
+            // сначала задачи без времени, потом с временем по возрастанию
             tasks.sort((task1, task2) -> {
-                if (task1.getTime() != null && !task1.getTime().isEmpty() && task2.getTime() != null && !task2.getTime().isEmpty()) {
-                    return task1.getTime().compareTo(task2.getTime()); // Сортировка по времени
-                } else if (task1.getTime() == null || task1.getTime().isEmpty()) {
-                    return 1; // Задачи без времени идут ниже
-                } else {
-                    return -1; // Задачи с временем идут выше
-                }
+                boolean t1Empty = task1.getTime() == null || task1.getTime().isEmpty();
+                boolean t2Empty = task2.getTime() == null || task2.getTime().isEmpty();
+
+                if (t1Empty && t2Empty) return 0;
+                if (t1Empty) return -1;
+                if (t2Empty) return 1;
+
+                return task1.getTime().compareTo(task2.getTime());
             });
 
-            // Добавляем заголовок категории и задачи
-            itemList.add(category); // Заголовок
-            itemList.addAll(tasks); // Все задачи из этой категории
+            itemList.add(category);
+            itemList.addAll(tasks);
         }
+
         checkTasks();
     }
 

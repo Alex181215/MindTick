@@ -25,6 +25,7 @@ import android.widget.TextView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -322,23 +323,31 @@ public class DoneFragment extends Fragment implements OnTaskUpdatedListener{
                 Task task = new Task();
                 task.setId(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_ID)));
                 task.setTitle(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_TITLE)));
-                task.setCategory(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_CATEGORY)));
+                String category = cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_CATEGORY));
+                if (category == null || category.isEmpty()) {
+                    category = "Без категории";
+                }
+                task.setCategory(category);
+
                 task.setDescription(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_DESCRIPTION)));
 
-                // Устанавливаем дату выполнения
+                // Дата выполнения (всегда есть)
                 task.setCompletedAt(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_COMPLETED_AT)));
-                task.setPreviousReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_PREVIOUS_REMINDER_ENABLED))); // Восстанавливаем предыдущие настройки напоминания
+
+                // Сохраняем предыдущие настройки напоминаний
+                task.setPreviousReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_PREVIOUS_REMINDER_ENABLED)));
+
+                // Запланированная дата (может быть нужна)
                 task.setDate(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_DATE)));
 
-                // Извлекаем время, если оно есть
+                // Время (если было)
                 String time = cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_TIME));
-                task.setTime(time);  // Устанавливаем время в задачу
+                task.setTime(time);
 
-                // Логируем извлеченные данные
-                Log.d("LoadDebug", "Loaded Task: " + task.getTitle() + " with time: " + time);
+                // Лог для проверки
+                Log.d("LoadDebug", "Loaded Task: " + task.getTitle() + " completedAt: " + task.getCompletedAt());
 
                 // Группируем задачи по категориям
-                String category = task.getCategory();
                 if (!categoryMap.containsKey(category)) {
                     categoryMap.put(category, new ArrayList<>());
                 }
@@ -348,17 +357,34 @@ public class DoneFragment extends Fragment implements OnTaskUpdatedListener{
         }
         database.close();
 
-        // Добавляем заголовки категорий и задачи
-        for (String category : categoryMap.keySet()) {
-            itemList.add(category);
-            itemList.addAll(categoryMap.get(category));
+        // Сортируем категории: "Без категории" первой, остальные по алфавиту
+        List<String> sortedCategories = new ArrayList<>(categoryMap.keySet());
+        Collections.sort(sortedCategories, String.CASE_INSENSITIVE_ORDER);
+        final String noCategory = "Без категории";
+        if (sortedCategories.contains(noCategory)) {
+            sortedCategories.remove(noCategory);
+            sortedCategories.add(0, noCategory);
         }
-        // Проверяем, пуст ли экран
-        checkTasks();
 
-        // Удаляем пустые категории
+        // Перебираем отсортированные категории
+        for (String category : sortedCategories) {
+            List<Task> tasks = categoryMap.get(category);
+
+            // Сортируем задачи внутри категории по completedAt — новые сверху
+            tasks.sort((t1, t2) -> {
+                if (t1.getCompletedAt() == null) return 1;
+                if (t2.getCompletedAt() == null) return -1;
+                return t2.getCompletedAt().compareTo(t1.getCompletedAt());
+            });
+
+            itemList.add(category); // Заголовок категории
+            itemList.addAll(tasks); // Задачи категории
+        }
+
+        checkTasks();
         removeEmptyCategories();
     }
+
 
     private void loadItems2() {
         itemList.clear();
