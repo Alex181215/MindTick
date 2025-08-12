@@ -2,6 +2,7 @@ package Adapter;
 
 import static java.security.AccessController.getContext;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.Context;
@@ -27,6 +28,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.mindtick.EditTask;
 import com.example.mindtick.NewTask;
 import com.example.mindtick.R;
 import com.example.mindtick.TaskBottomSheetDialogFragment;
@@ -86,23 +88,22 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         AlertDialog dialog = new AlertDialog.Builder(context, R.style.CustomDialog)
                 .setMessage("Чтобы включить напоминание, нужно установить дату и время. Добавить их сейчас?")
                 .setPositiveButton("Добавить", (dialog1, which) -> {
-                    // Открываем BottomSheet редактирования задачи с флагом для автозапуска пикеров
-                    TaskBottomSheetDialogFragment bottomSheet = TaskBottomSheetDialogFragment.newInstance(task);
+                    String returnFragmentTag;
 
-                    Bundle args = bottomSheet.getArguments();
-                    if (args == null) args = new Bundle();
-                    args.putBoolean("openDateTimePicker", true); // наш флаг
-                    bottomSheet.setArguments(args);
+                    if (isTodayScreen) {
+                        returnFragmentTag = "TodayFragment";
+                    } else if (isAllTasksScreen) {
+                        returnFragmentTag = "AllTasksFragment";
+                    } else {
+                        returnFragmentTag = "TodayFragment";  // дефолтный вариант
+                    }
 
-                    bottomSheet.setOnTaskUpdatedListener(() -> {
-                        if (onTaskUpdatedListener != null) {
-                            onTaskUpdatedListener.onTaskUpdated();
-                        }
-                    });
-
-                    // Открываем фрагмент
-                    FragmentManager fragmentManager = parentFragment.getParentFragmentManager();
-                    bottomSheet.show(fragmentManager, bottomSheet.getTag());
+                    Intent intent = new Intent(context, EditTask.class);
+                    intent.putExtra("task_id", task.getId());
+                    intent.putExtra("returnFragment", returnFragmentTag);
+                    ((Activity) context).startActivityForResult(intent, EditTask.REQUEST_EDIT_TASK);
+                    ((Activity) context).overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
+                    taskHolder.switchReminder.setChecked(false);
                 })
                 .setNegativeButton("Отменить", (dialog12, which) -> {
                     // Сбрасываем переключатель
@@ -175,18 +176,28 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             Task task = (Task) itemList.get(position);
 
             holder.itemView.setOnClickListener(v -> {
-                TaskBottomSheetDialogFragment bottomSheet = TaskBottomSheetDialogFragment.newInstance(task);
+                if (isCompletedScreen) {
+                    // Экран "Выполнено" — запрещаем редактирование, показываем тост
+                    Toast.makeText(context, "Редактирование запрещено. Восстановите задачу для изменений.", Toast.LENGTH_SHORT).show();
+                } else {
+                    String returnFragmentTag;
 
-                bottomSheet.setOnTaskUpdatedListener(() -> {
-                    if (onTaskUpdatedListener != null) {
-                        onTaskUpdatedListener.onTaskUpdated();
+                    if (isTodayScreen) {
+                        returnFragmentTag = "TodayFragment";
+                    } else if (isAllTasksScreen) {
+                        returnFragmentTag = "AllTasksFragment";
+                    } else {
+                        returnFragmentTag = "TodayFragment";  // дефолтный вариант
                     }
-                });
 
-
-                FragmentManager fragmentManager = parentFragment.getParentFragmentManager();
-                bottomSheet.show(fragmentManager, bottomSheet.getTag());
+                    Intent intent = new Intent(context, EditTask.class);
+                    intent.putExtra("task_id", task.getId());
+                    intent.putExtra("returnFragment", returnFragmentTag);
+                    ((Activity) context).startActivityForResult(intent, EditTask.REQUEST_EDIT_TASK);
+                    ((Activity) context).overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
+                }
             });
+
 
 
             TaskViewHolder taskHolder = (TaskViewHolder) holder;

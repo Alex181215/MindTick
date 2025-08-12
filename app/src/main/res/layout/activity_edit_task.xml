@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/dark_gray"
     android:padding="16dp"
-    tools:context=".NewTask">
+    tools:context=".EditTask">
 
     <!-- Заголовок и шестеренка -->
     <TextView
@@ -14,7 +14,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="34dp"
-        android:text="Новая задача"
+        android:text="Редактирование задачи"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
         android:textColor="@color/gainsboro"
@@ -271,7 +271,7 @@
                     android:trackTint="@drawable/switch_track" />
 
                 <androidx.cardview.widget.CardView
-                    android:id="@+id/btnCreate"
+                    android:id="@+id/btnSave"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_alignParentStart="true"
@@ -286,13 +286,14 @@
                     app:cardElevation="4dp">
 
                     <Button
+                        android:id="@+id/btnSaveText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
                         android:background="@android:color/transparent"
                         android:clickable="false"
                         android:gravity="center"
-                        android:text="Создать"
+                        android:text="Сохранить"
                         android:textAlignment="center"
                         android:textColor="@color/category" />
                 </androidx.cardview.widget.CardView>

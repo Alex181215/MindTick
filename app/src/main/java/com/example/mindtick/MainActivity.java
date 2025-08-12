@@ -23,6 +23,7 @@ import android.widget.Switch;
 import android.widget.Toast;
 import android.widget.Toolbar;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -350,5 +351,49 @@ public class MainActivity extends AppCompatActivity{
         return null;
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == EditTask.REQUEST_EDIT_TASK && resultCode == RESULT_OK && data != null) {
+            long updatedId = data.getLongExtra("task_id", -1);
+            String returnFragment = data.getStringExtra("returnFragment");
+            // обновляем список и показываем нужный фрагмент
+            if (returnFragment != null) {
+                loadFragmentByTag(returnFragment);
+            } else {
+                // просто обновить текущий фрагмент
+                refreshCurrentFragment();
+            }
+        }
+    }
+
+    private void refreshCurrentFragment() {
+        Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+        if (currentFragment != null) {
+            FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+            transaction.detach(currentFragment);
+            transaction.attach(currentFragment);
+            transaction.commit();
+        }
+    }
+
+    public void loadFragmentByTag(String tag) {
+        Fragment fragment;
+        switch (tag) {
+            case "TodayFragment":
+                fragment = new TodayFragment();
+                break;
+            case "AllTasksFragment":
+                fragment = new AllTasksFragment();
+                break;
+            case "DoneFragment":
+                fragment = new DoneFragment();
+                break;
+            default:
+                fragment = new TodayFragment();
+                break;
+        }
+        loadFragment(fragment, tag);
+    }
 
 }

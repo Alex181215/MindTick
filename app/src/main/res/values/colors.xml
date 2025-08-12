@@ -25,5 +25,7 @@
     <color name="orange">#FF9800</color> // активные элементы
     <color name="blue">#2196F3</color> // активные элементы
     <color name="transporent">#00FFFFFF</color> // активные элементы
+    <color name="transparent">#00000000</color>
+
 
 </resources>

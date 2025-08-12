@@ -1,7 +1,9 @@
 package com.example.mindtick;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ContentValues;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
@@ -108,7 +110,14 @@ public class DoneFragment extends Fragment implements OnTaskUpdatedListener{
                     if (direction == ItemTouchHelper.RIGHT) {
                         // 🔥 **Свайп вправо – подтверждение выполнения**
                         showConfirmationDialog("Восстановить задачу как активную ?", () -> {
-                            markTaskAsCompleted(task, position);
+                            Intent intent = new Intent(getActivity(), EditTask.class);
+                            intent.putExtra("task_id", task.getId());
+                            intent.putExtra("returnFragment", "DoneFragment"); // или текущий фрагмент, откуда пришли
+                            intent.putExtra("restoreMode", true); // спец-флаг для режима восстановления
+                            ((Activity) getActivity()).startActivityForResult(intent, EditTask.REQUEST_EDIT_TASK);
+                            getActivity().overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
+
+                          //  recyclerView.getAdapter().notifyItemChanged(position);
                         }, () -> {
                             recyclerView.getAdapter().notifyItemChanged(position);
                         });
