@@ -14,16 +14,7 @@
         android:layout_height="match_parent"
         android:padding="0dp">
 
-        <ImageButton
-            android:id="@+id/btnAddTask"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentBottom="true"
-            android:layout_marginEnd="37dp"
-            android:layout_marginBottom="120dp"
-            android:background="@drawable/baseline_add_24"
-            android:padding="10dp" />
+
 
         <!-- Заголовок -->
         <TextView
@@ -33,19 +24,19 @@
             android:layout_alignParentStart="true"
             android:layout_alignParentTop="true"
             android:layout_marginStart="20dp"
-            android:layout_marginTop="50dp"
+            android:layout_marginTop="40dp"
             android:text="Задачи на сегодня"
             android:textColor="@color/title_text"
-            android:textSize="22sp"
+            android:textSize="20sp"
             android:textStyle="bold" />
 
         <ImageButton
             android:id="@+id/btnSettings"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
             android:layout_alignParentTop="true"
             android:layout_alignParentEnd="true"
-            android:layout_marginTop="46dp"
+            android:layout_marginTop="40dp"
             android:layout_marginEnd="18dp"
             android:background="@drawable/baseline_settings_24" />
 
@@ -71,10 +62,21 @@
             android:layout_height="0dp"
             android:layout_above="@id/bottomNavigation"
             android:layout_below="@id/tvTitle"
-            android:layout_marginTop="15dp"
-            android:layout_marginBottom="40dp"
+            android:layout_marginTop="0dp"
+            android:layout_marginBottom="20dp"
             app:layout_constraintTop_toTopOf="parent" />
 
+
+        <ImageButton
+            android:id="@+id/btnAddTask"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginEnd="14dp"
+            android:layout_marginBottom="90dp"
+            android:background="@drawable/baseline_add_24"
+            android:padding="10dp" />
 
         <!-- Нижний бар -->
         <LinearLayout
@@ -82,7 +84,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
-            android:layout_marginBottom="40dp"
+            android:layout_marginBottom="30dp"
             android:orientation="horizontal"
             android:padding="8dp">
 
@@ -116,8 +118,8 @@
                     android:text="Сегодня"
                     android:textAlignment="center"
                     android:textColor="@color/my_light_color"
-                    android:textSize="14sp"
-                    android:textStyle="italic"
+                    android:textSize="12sp"
+                    android:textStyle="normal"
                     android:visibility="gone" />
 
                 <TextView
@@ -127,7 +129,7 @@
                     android:text="Сегодня"
                     android:textAlignment="center"
                     android:textColor="@color/title_text"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:textStyle="normal" />
 
             </LinearLayout>
@@ -163,7 +165,7 @@
                     android:text="Все задачи"
                     android:textAlignment="center"
                     android:textColor="@color/my_light_color"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:textStyle="normal" />
 
                 <TextView
@@ -173,7 +175,7 @@
                     android:text="Все задачи"
                     android:textAlignment="center"
                     android:textColor="@color/title_text"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:textStyle="normal"
                     android:visibility="gone" />
 
@@ -211,7 +213,7 @@
                     android:text="Выполнено"
                     android:textAlignment="center"
                     android:textColor="@color/my_light_color"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:textStyle="normal" />
 
                 <TextView
@@ -221,11 +223,13 @@
                     android:text="Выполнено"
                     android:textAlignment="center"
                     android:textColor="@color/title_text"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:textStyle="normal"
                     android:visibility="gone" />
 
             </LinearLayout>
+
+
         </LinearLayout>
     </RelativeLayout>
 
