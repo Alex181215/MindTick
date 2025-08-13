@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity{
     private void showPermissionsDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("Настройки для корректной работы")
-                .setMessage("Чтобы напоминания работали всегда, включите автозапуск, фон и отключите экономию батареи.")
+                .setMessage("Чтобы, напоминания работали всегда, включите автозапуск в фоне и отключите экономию батареи.")
                 .setPositiveButton("Сделать сейчас", (dialog, which) -> {
                     requestIgnoreBatteryOptimizations();
                     openAutoStartSettings();

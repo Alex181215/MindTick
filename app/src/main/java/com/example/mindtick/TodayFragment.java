@@ -109,7 +109,7 @@ public class TodayFragment extends Fragment implements OnTaskUpdatedListener {
 
                     if (direction == ItemTouchHelper.RIGHT) {
                         // 🔥 **Свайп вправо – подтверждение выполнения**
-                        showConfirmationDialog("Отметить задачу как выполненную?", () -> {
+                        showConfirmationDialog("Отметить задачу" + " " + task.getTitle() + ", " + "как выполненную ?", () -> {
                             markTaskAsCompleted(task, position);
                         }, () -> {
                             recyclerView.getAdapter().notifyItemChanged(position);
@@ -117,7 +117,7 @@ public class TodayFragment extends Fragment implements OnTaskUpdatedListener {
 
                     } else if (direction == ItemTouchHelper.LEFT) {
                         // ❌ **Свайп влево – подтверждение удаления**
-                        showConfirmationDialog("Удалить задачу?", () -> {
+                        showConfirmationDialog("Удалить задачу " + task.getTitle() + " ?" , () -> {
                             deleteTask(task, position);
                         }, () -> {
                             recyclerView.getAdapter().notifyItemChanged(position);
