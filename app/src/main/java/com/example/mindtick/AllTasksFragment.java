@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Canvas;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,6 +20,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
+import android.view.animation.OvershootInterpolator;
 import android.widget.TextView;
 
 import java.text.SimpleDateFormat;
@@ -111,27 +113,56 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
                     Task task = (Task) item;
 
                     if (direction == ItemTouchHelper.RIGHT) {
-                        // 🔥 **Свайп вправо – подтверждение выполнения**
-                        showConfirmationDialog("Отметить задачу" + " " + task.getTitle() + ", " + "как выполненную ?", () -> {
-                            markTaskAsCompleted(task, position);
-                        }, () -> {
-                            recyclerView.getAdapter().notifyItemChanged(position);
-                        });
-
+                        showConfirmationDialog(
+                                "Отметить задачу \"" + task.getTitle() + "\" как выполненную?",
+                                () -> {
+                                    markTaskAsCompleted(task, position);
+                                },
+                                () -> {
+                                    recyclerView.getAdapter().notifyItemChanged(position);
+                                }
+                        );
                     } else if (direction == ItemTouchHelper.LEFT) {
-                        // ❌ **Свайп влево – подтверждение удаления**
-                        showConfirmationDialog("Удалить задачу " + task.getTitle() + " ?" , () -> {
-                            deleteTask(task, position);
-                        }, () -> {
-                            recyclerView.getAdapter().notifyItemChanged(position);
-                        });
+                        showConfirmationDialog(
+                                "Удалить задачу \"" + task.getTitle() + "\"?",
+                                () -> {
+                                    deleteTask(task, position);
+                                },
+                                () -> {
+                                    recyclerView.getAdapter().notifyItemChanged(position);
+                                }
+                        );
                     }
-
                 } else {
-                    // Если это категория, отменяем свайп
                     recyclerView.getAdapter().notifyItemChanged(position);
                 }
             }
+
+            @Override
+            public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView,
+                                    @NonNull RecyclerView.ViewHolder viewHolder,
+                                    float dX, float dY, int actionState, boolean isCurrentlyActive) {
+
+                if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+                    float maxSwipe = viewHolder.itemView.getWidth() / 2f; // максимум 50% ширины
+                    float newDX = Math.min(Math.max(dX, -maxSwipe), maxSwipe);
+
+                    // Если свайп активен (рука на экране) — двигаем карточку
+                    if (isCurrentlyActive) {
+                        super.onChildDraw(c, recyclerView, viewHolder, newDX, dY, actionState, true);
+                    } else {
+                        // Возврат карточки после отмены свайпа
+                        viewHolder.itemView.animate()
+                                .translationX(0)
+                                .setInterpolator(new OvershootInterpolator(2f)) // "пружина"
+                                .setDuration(400)
+                                .start();
+                    }
+                } else {
+                    super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+                }
+            }
+
         };
 
 // Привязываем свайп к RecyclerView
