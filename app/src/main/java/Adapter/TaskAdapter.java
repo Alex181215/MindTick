@@ -231,9 +231,9 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             if (isCompletedScreen) {
                 // Экран "Выполнено"
                 if (task.getCompletedAt() != null && !task.getCompletedAt().isEmpty()) {
-                    taskHolder.tvNextExecutionTime.setText("Завершено в: " + task.getCompletedAt());
+                    taskHolder.tvNextExecutionTime.setText("Завершено: " + task.getCompletedAt());
                 } else {
-                    taskHolder.tvNextExecutionTime.setText("Завершено в: " + task.getCompletedAt());
+                    taskHolder.tvNextExecutionTime.setText("Завершено: " + task.getCompletedAt());
                 }
             } else if (isTodayScreen) {
                 // Экран "Сегодня"

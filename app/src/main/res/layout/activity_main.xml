@@ -62,7 +62,7 @@
             android:layout_height="0dp"
             android:layout_above="@id/bottomNavigation"
             android:layout_below="@id/tvTitle"
-            android:layout_marginTop="0dp"
+            android:layout_marginTop="6dp"
             android:layout_marginBottom="20dp"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -84,7 +84,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
-            android:layout_marginBottom="30dp"
+            android:layout_marginBottom="34dp"
             android:orientation="horizontal"
             android:padding="8dp">
 
