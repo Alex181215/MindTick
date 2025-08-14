@@ -31,6 +31,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.mindtick.EditTask;
 import com.example.mindtick.NewTask;
 import com.example.mindtick.R;
+import com.example.mindtick.StickyHeaderInterface;
 import com.example.mindtick.TaskBottomSheetDialogFragment;
 
 import java.text.ParseException;
@@ -42,7 +43,7 @@ import Model.Task;
 import Utils.ReminderHelper;
 import Utils.Util;
 
-public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements StickyHeaderInterface {
     private Fragment parentFragment;
     private Context context;
     private List<Object> itemList; // Мы работаем с List<Object>, чтобы поддерживать заголовки и задачи
@@ -53,6 +54,15 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final int TYPE_HEADER = 0;
     private static final int TYPE_TASK = 1;
     private DatabaseHandler db;  // Объявляем переменную для работы с базой данных
+
+    public static final int getHeaderType() {
+        return TYPE_HEADER;
+    }
+
+    public List<Object> getItemList() {
+        return itemList;
+    }
+
 
     public interface OnTaskUpdatedListener {
         void onTaskUpdated();
@@ -372,5 +382,30 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             ivPriorityB = itemView.findViewById(R.id.ivPriorityB);
             switchReminder = itemView.findViewById(R.id.switchReminder);
         }
+    }
+
+    // Методы интерфейса
+    @Override
+    public int getHeaderPositionForItem(int itemPosition) {
+        // Ищем ближайший заголовок сверху (аналогично твоему циклу)
+        for (int pos = itemPosition; pos >= 0; pos--) {
+            if (getItemViewType(pos) == TYPE_HEADER) {
+                return pos;
+            }
+        }
+        return -1; // Нет заголовка
+    }
+
+    @Override
+    public void bindHeaderData(View header, int headerPosition) {
+        // Bind как в onBindViewHolder для HEADER
+        TextView tvCategory = header.findViewById(R.id.tvCategory);
+        String category = (String) itemList.get(headerPosition);
+        tvCategory.setText(category);
+    }
+
+    @Override
+    public boolean isHeader(int itemPosition) {
+        return getItemViewType(itemPosition) == TYPE_HEADER;
     }
 }

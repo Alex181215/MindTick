@@ -94,6 +94,10 @@ public class DoneFragment extends Fragment implements OnTaskUpdatedListener{
         loadItems();
         recyclerView.setAdapter(adapter);
 
+        // Добавляем липкую шапку
+// Вместо new StickyHeaderItemDecoration(adapter)
+        recyclerView.addItemDecoration(new StickyHeaderItemDecoration(adapter)); // Поскольку адаптер реализует интерфейс
+
         ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(0,
                 ItemTouchHelper.RIGHT | ItemTouchHelper.LEFT) {
             @Override

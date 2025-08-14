@@ -95,6 +95,9 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
         loadItems();
         recyclerView.setAdapter(adapter);
 
+        // Добавляем липкую шапку
+        recyclerView.addItemDecoration(new StickyHeaderItemDecoration(adapter)); // Поскольку адаптер реализует интерфейс
+
         ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(0,
                 ItemTouchHelper.RIGHT | ItemTouchHelper.LEFT) {
             @Override
