@@ -2,7 +2,6 @@ package com.example.mindtick;
 
 import android.app.AlertDialog;
 import android.content.ContentValues;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Canvas;
 import android.os.Bundle;
@@ -10,11 +9,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,11 +20,11 @@ import android.view.animation.AnimationUtils;
 import android.view.animation.OvershootInterpolator;
 import android.widget.TextView;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
@@ -35,47 +32,41 @@ import java.util.Random;
 import Adapter.TaskAdapter;
 import Data.DatabaseHandler;
 import Model.Task;
+import Utils.FilterType;
 import Utils.ReminderHelper;
 import Utils.Util;
 
-public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
+public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener {
     private RecyclerView recyclerView;
-    private TaskAdapter taskAdapter;
+    private TextView emptyTextView;
     private List<Object> itemList = new ArrayList<>();
     private DatabaseHandler db;
-    private TextView emptyTextView;
     private TaskAdapter adapter;
+    private FilterType currentFilter = FilterType.CATEGORY;
+    private boolean sortAscending = true;
 
-
-    private static final String[] NO_TASK_MESSAGES = {
-            "Вы пока не создали ни одной задачи. Самое время начать! ✍️",
-            "Пусто... но ведь это ненадолго, верно? 🤔",
-            "Задач пока нет. Но вы всегда можете добавить! ➕",
-            "Все под контролем! Или просто еще ничего не запланировано? 😏",
-            "Нет задач — нет забот? Давайте добавим первую! 🎯",
-            "Ваш список пока пуст. Может, начнем с чего-то простого? ☕",
-            "Сегодня идеальный день, чтобы спланировать дела! 📅",
-            "Свобода — это круто! Но хоть одну задачу стоит записать. 😉",
-            "Задач нет... Или это уже выполненный список мечты? ✨",
-            "Ваш список дел ждет первых записей. Сделаем это! 🚀",
-            "Пока пусто, но ведь великие дела начинаются с малого! 🔥",
-            "Не откладывайте на потом. Создайте первую задачу прямо сейчас! ⏳",
-            "Организованность начинается с первого шага. Вперед! 🏁",
-            "Здесь пока тихо... Давайте заполним этот список! 📖",
-            "Ты можешь начать с чего угодно. Главное — начать! 🎬",
-            "Время творить продуктивность! Добавь первую задачу. ⚡",
-            "Пусто? Значит, есть место для великих идей! 💡",
-            "Одна задача – это уже начало! Попробуй! 🚀",
-            "Как насчет небольшого челленджа? Добавь задачу! 💪",
-            "Твой список пока пуст, но впереди столько всего интересного! 🔥",
-            "Каждое большое дело начинается с одного маленького шага. Сделай его! 🏆",
-            "Планирование — ключ к успеху! Давай создадим первую задачу. 🔑",
-            "Сегодня твой шанс стать продуктивнее! Начнем? ✅",
-            "Ты хозяин своего времени. Наполни список важными делами! ⏳",
-            "Новый день – новые цели! Пора добавить первую задачу. 🌞",
-            "Давай сделаем этот день продуктивным! Начни с первой задачи. 🚀"
+    private static final String[] ALL_TASKS_NO_TASK_MESSAGES = {
+            "Список задач пуст... Пора добавить что-то новенькое! 📅",
+            "Никаких задач? Самое время спланировать что-то крутое! ✍️",
+            "Пусто, как в космосе! Добавь задачи, чтобы заполнить пространство! 🌌",
+            "Без задач жизнь скучна. Давай добавим немного дел! 🚀",
+            "Список задач пуст. Начни с малого – добавь одну задачу! ✅",
+            "Чистый лист ждёт твоих идей. Что запланируешь? 💡",
+            "Ни одной задачи? Это шанс начать с чистого листа! 📝",
+            "Пустота в задачах – это возможность для новых целей! 🎯",
+            "Добавь задачу, чтобы этот список ожил! ✨",
+            "Нет задач? Время организовать свой день! ⏳",
+            "Список пуст – пора наполнить его планами! 📌",
+            "Без задач не достичь целей. Давай начнём! 🏆",
+            "Пустой список – это приглашение к действию! 🔥",
+            "Что будем делать? Добавь задачу и начни! 👣",
+            "Список задач пуст. Давай сделаем его продуктивным! 💪",
+            "Чистый список – идеальная возможность для новых идей! 🌞",
+            "Пора добавить задачу и начать движение к цели! 🚀",
+            "Без задач? Запланируй что-то интересное! 🤩",
+            "Список ждёт твоих планов. С чего начнём? 📖",
+            "Пусто? Добавь задачу и сделай день продуктивным! ✅"
     };
-
 
     @Nullable
     @Override
@@ -86,17 +77,14 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
         emptyTextView = view.findViewById(R.id.emptyTextView);
 
         db = new DatabaseHandler(getContext());
-        adapter = new TaskAdapter(getContext(), itemList, false, db, false, true, this); // для Все задачи
+        adapter = new TaskAdapter(getContext(), itemList, true, db, false, false, this);
         adapter.setOnTaskUpdatedListener(() -> {
-            Log.d("TodayFragment", "Обновляем задачи после изменения");
-            loadItems(); // твой метод, фильтрующий задачи по дате
-            adapter.notifyDataSetChanged();
+            Log.d("AllTasksFragment", "Обновляем задачи после изменения");
+            loadItems();
         });
-        loadItems();
-        recyclerView.setAdapter(adapter);
 
-        // Добавляем липкую шапку
-        recyclerView.addItemDecoration(new StickyHeaderItemDecoration(adapter)); // Поскольку адаптер реализует интерфейс
+        recyclerView.setAdapter(adapter);
+        recyclerView.addItemDecoration(new StickyHeaderItemDecoration(adapter));
 
         ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(0,
                 ItemTouchHelper.RIGHT | ItemTouchHelper.LEFT) {
@@ -109,8 +97,8 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
 
             @Override
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-                int position = viewHolder.getAdapterPosition();
-                Object item = itemList.get(position);
+                final int finalPosition = viewHolder.getAdapterPosition();
+                Object item = itemList.get(finalPosition);
 
                 if (item instanceof Task) {
                     Task task = (Task) item;
@@ -118,26 +106,18 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
                     if (direction == ItemTouchHelper.RIGHT) {
                         showConfirmationDialog(
                                 "Отметить задачу \"" + task.getTitle() + "\" как выполненную?",
-                                () -> {
-                                    markTaskAsCompleted(task, position);
-                                },
-                                () -> {
-                                    recyclerView.getAdapter().notifyItemChanged(position);
-                                }
+                                () -> markTaskAsCompleted(task, finalPosition),
+                                () -> recyclerView.getAdapter().notifyItemChanged(finalPosition)
                         );
                     } else if (direction == ItemTouchHelper.LEFT) {
                         showConfirmationDialog(
                                 "Удалить задачу \"" + task.getTitle() + "\"?",
-                                () -> {
-                                    deleteTask(task, position);
-                                },
-                                () -> {
-                                    recyclerView.getAdapter().notifyItemChanged(position);
-                                }
+                                () -> deleteTask(task, finalPosition),
+                                () -> recyclerView.getAdapter().notifyItemChanged(finalPosition)
                         );
                     }
                 } else {
-                    recyclerView.getAdapter().notifyItemChanged(position);
+                    recyclerView.getAdapter().notifyItemChanged(finalPosition);
                 }
             }
 
@@ -145,19 +125,16 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
             public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView,
                                     @NonNull RecyclerView.ViewHolder viewHolder,
                                     float dX, float dY, int actionState, boolean isCurrentlyActive) {
-
                 if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
-                    float maxSwipe = viewHolder.itemView.getWidth() / 2f; // максимум 50% ширины
+                    float maxSwipe = viewHolder.itemView.getWidth() / 2f;
                     float newDX = Math.min(Math.max(dX, -maxSwipe), maxSwipe);
 
-                    // Если свайп активен (рука на экране) — двигаем карточку
                     if (isCurrentlyActive) {
                         super.onChildDraw(c, recyclerView, viewHolder, newDX, dY, actionState, true);
                     } else {
-                        // Возврат карточки после отмены свайпа
                         viewHolder.itemView.animate()
                                 .translationX(0)
-                                .setInterpolator(new OvershootInterpolator(2f)) // "пружина"
+                                .setInterpolator(new OvershootInterpolator(2f))
                                 .setDuration(400)
                                 .start();
                     }
@@ -165,13 +142,12 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
                     super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
                 }
             }
-
         };
 
-// Привязываем свайп к RecyclerView
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
         itemTouchHelper.attachToRecyclerView(recyclerView);
 
+        loadItems();
         return view;
     }
 
@@ -181,65 +157,50 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
                 .setPositiveButton("Да", (dialogInterface, which) -> onConfirm.run())
                 .setNegativeButton("Отмена", (dialogInterface, which) -> onCancel.run())
                 .setCancelable(false)
-                .create(); // Создаем диалог, но пока не показываем
+                .create();
 
-        dialog.show(); // Показываем диалог
+        dialog.show();
 
-        // Получаем цвета из ресурсов
         int positiveColor = ContextCompat.getColor(getContext(), R.color.all_text);
         int negativeColor = ContextCompat.getColor(getContext(), R.color.all_text);
         int messageColor = ContextCompat.getColor(getContext(), R.color.title_text);
 
-        // После показа диалога меняем цвет кнопок
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(positiveColor);  // "Да"
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(negativeColor); // "Отмена"
-
-        // **Меняем цвет текста сообщения**
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(positiveColor);
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(negativeColor);
         TextView messageView = dialog.findViewById(android.R.id.message);
         if (messageView != null) {
             messageView.setTextColor(messageColor);
         }
     }
 
-
     private void markTaskAsCompleted(Task task, int position) {
         SQLiteDatabase database = db.getWritableDatabase();
         ContentValues values = new ContentValues();
 
         String completedAt = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(new Date());
-        values.put(Util.KEY_STATUS, 0); // 0 = выполнена
+        Log.d("CompleteDebug", "Saving prevReminder: " + task.getReminderEnabled());
+        values.put(Util.KEY_STATUS, 0);
         values.put(Util.KEY_COMPLETED_AT, completedAt);
+        values.put(Util.KEY_PREVIOUS_REMINDER_ENABLED, task.getReminderEnabled());
+        values.put(Util.KEY_REMINDER_ENABLED, 0);
 
-        // Логирование перед сохранением времени
-        Log.d("CompleteDebug", "Time before update: " + task.getTime());
-
-
-        // Сохраняем время задачи, если оно задано
-        if (!task.getTime().isEmpty()) {
-            values.put(Util.KEY_TIME, task.getTime()); // сохраняем время, если оно есть
+        if (task.getTime().isEmpty()) {
+            Log.d("CompleteDebug", "No time set for this task.");
         }
 
-        // Логирование перед сохранением времени
         Log.d("CompleteDebug", "Time before update: " + task.getTime());
-
         database.update(Util.TABLE_NAME, values, Util.KEY_ID + " = ?", new String[]{String.valueOf(task.getId())});
         database.close();
 
-        // Используем getContext() или requireContext(), если адаптер привязан к Fragment
         if (getContext() != null) {
             ReminderHelper.cancelAlarm(getContext(), task);
         } else {
             Log.e("TaskAdapter", "Context is null. Cannot cancel alarm.");
         }
 
-        // Удаляем задачу из списка
         itemList.remove(position);
         recyclerView.getAdapter().notifyItemRemoved(position);
-
-        // Проверяем и удаляем пустую категорию
-        checkAndRemoveEmptyCategory(task);
-
-        // Проверяем, пуст ли экран
+        checkAndRemoveEmptyHeader(task);
         checkTasks();
     }
 
@@ -256,131 +217,240 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
 
         itemList.remove(position);
         recyclerView.getAdapter().notifyItemRemoved(position);
-
-        checkAndRemoveEmptyCategory(task);
+        checkAndRemoveEmptyHeader(task);
         checkTasks();
     }
 
+    private void checkAndRemoveEmptyHeader(Task task) {
+        final String header;
+        if (currentFilter == FilterType.CATEGORY) {
+            header = task.getCategory() != null && !task.getCategory().isEmpty() ? task.getCategory() : "Без категории";
+        } else if (currentFilter == FilterType.TIME) {
+            header = getTimeCategory(task.getTime());
+        } else if (currentFilter == FilterType.DATE) {
+            header = task.getDate() != null && !task.getDate().isEmpty() ? task.getDate() : "Без даты";
+        } else {
+            return;
+        }
 
-    // Метод для проверки и удаления пустой категории
-    private void checkAndRemoveEmptyCategory(Task task) {
-        String category = task.getCategory(); // Получаем категорию задачи
-        if (category == null || category.isEmpty()) return; // Если категории нет — выходим
-
-        // Проверяем, остались ли задачи с этой категорией
-        boolean isCategoryEmpty = true;
+        boolean isHeaderEmpty = true;
         for (Object obj : itemList) {
             if (obj instanceof Task) {
                 Task currentTask = (Task) obj;
-                if (category.equals(currentTask.getCategory())) {
-                    isCategoryEmpty = false;
+                String taskHeader = null;
+                if (currentFilter == FilterType.CATEGORY) {
+                    taskHeader = currentTask.getCategory() != null && !currentTask.getCategory().isEmpty() ? currentTask.getCategory() : "Без категории";
+                } else if (currentFilter == FilterType.TIME) {
+                    taskHeader = getTimeCategory(currentTask.getTime());
+                } else if (currentFilter == FilterType.DATE) {
+                    taskHeader = currentTask.getDate() != null && !currentTask.getDate().isEmpty() ? currentTask.getDate() : "Без даты";
+                }
+                if (header.equals(taskHeader)) {
+                    isHeaderEmpty = false;
                     break;
                 }
             }
         }
 
-        // Если в категории больше нет задач — удаляем её из списка
-        if (isCategoryEmpty) {
-            itemList.removeIf(obj -> obj instanceof String && obj.equals(category));
-
-            // Обновляем адаптер
+        if (isHeaderEmpty) {
+            itemList.removeIf(obj -> obj instanceof String && obj.equals(header));
             recyclerView.getAdapter().notifyDataSetChanged();
         }
     }
 
+    private String getTimeCategory(String time) {
+        if (time == null || time.isEmpty()) {
+            return "Без времени";
+        }
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            Date date = sdf.parse(time);
+            if (date == null) return "Без времени";
+
+            int hour = date.getHours();
+            if (hour >= 6 && hour < 12) return "Утро";
+            if (hour >= 12 && hour < 18) return "День";
+            if (hour >= 18 && hour < 24) return "Вечер";
+            return "Ночь";
+        } catch (ParseException e) {
+            return "Без времени";
+        }
+    }
+
+    private int getTimeCategoryOrder(String category, boolean ascending) {
+        String[] orderAsc = {"Без времени", "Утро", "День", "Вечер", "Ночь"};
+        String[] orderDesc = {"Без времени", "Ночь", "Вечер", "День", "Утро"};
+        String[] order = ascending ? orderAsc : orderDesc;
+        for (int i = 0; i < order.length; i++) {
+            if (order[i].equals(category)) return i;
+        }
+        return 0;
+    }
 
     private void loadItems() {
         itemList.clear();
-        LinkedHashMap<String, List<Task>> categoryMap = new LinkedHashMap<>();
+        List<Task> tasks = db.getAllTasks();
 
-        SQLiteDatabase database = db.getReadableDatabase();
+        Log.d("AllTasksFragment", "Applying filter: " + currentFilter + ", sortAscending: " + sortAscending);
 
-        // Выбираем все активные задачи
-        Cursor cursor = database.query(Util.TABLE_NAME, null, Util.KEY_STATUS + " = ?",
-                new String[]{"1"}, null, null, Util.KEY_CATEGORY);
+        if (tasks.isEmpty()) {
+            checkTasks();
+            adapter.notifyDataSetChanged();
+            return;
+        }
 
-        if (cursor != null && cursor.moveToFirst()) {
-            do {
-                Task task = new Task();
-                task.setId(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_ID)));
-                task.setTitle(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_TITLE)));
-                task.setCategory(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_CATEGORY)));
-                task.setDate(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_DATE)));
-                task.setTime(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_TIME)));
-                task.setDescription(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_DESCRIPTION)));
-
-                // Загружаем приоритет
-                task.setPriority(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_PRIORITY)));
-
-                task.setReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_REMINDER_ENABLED)));
-
-                // Обрабатываем пустую категорию
-                String category = task.getCategory();
-                if (category == null || category.isEmpty()) {
-                    category = "Без категории";
+        switch (currentFilter) {
+            case CATEGORY:
+                List<String> categories = new ArrayList<>();
+                for (Task task : tasks) {
+                    String category = task.getCategory() != null && !task.getCategory().isEmpty() ? task.getCategory() : "Без категории";
+                    if (!categories.contains(category)) {
+                        categories.add(category);
+                    }
                 }
+                Collections.sort(categories, (c1, c2) -> {
+                    if (c1.equals("Без категории")) return -1;
+                    if (c2.equals("Без категории")) return 1;
+                    return sortAscending ? c1.compareTo(c2) : c2.compareTo(c1);
+                });
 
-                if (!categoryMap.containsKey(category)) {
-                    categoryMap.put(category, new ArrayList<>());
+                for (String category : categories) {
+                    itemList.add(category);
+                    List<Task> categoryTasks = new ArrayList<>();
+                    for (Task task : tasks) {
+                        String taskCategory = task.getCategory() != null && !task.getCategory().isEmpty() ? task.getCategory() : "Без категории";
+                        if (taskCategory.equals(category)) {
+                            categoryTasks.add(task);
+                        }
+                    }
+                    Collections.sort(categoryTasks, (t1, t2) -> {
+                        String time1 = t1.getTime() != null ? t1.getTime() : "";
+                        String time2 = t2.getTime() != null ? t2.getTime() : "";
+                        if (time1.isEmpty() && time2.isEmpty()) return 0;
+                        if (time1.isEmpty()) return -1;
+                        if (time2.isEmpty()) return 1;
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                            Date date1 = sdf.parse(time1);
+                            Date date2 = sdf.parse(time2);
+                            return date1.compareTo(date2); // Всегда по возрастанию времени
+                        } catch (ParseException e) {
+                            return time1.compareTo(time2);
+                        }
+                    });
+                    itemList.addAll(categoryTasks);
                 }
-                categoryMap.get(category).add(task);
-            } while (cursor.moveToNext());
-            cursor.close();
+                break;
+
+            case TIME:
+                List<String> timeCategories = new ArrayList<>();
+                for (Task task : tasks) {
+                    String timeCategory = getTimeCategory(task.getTime());
+                    if (!timeCategories.contains(timeCategory)) {
+                        timeCategories.add(timeCategory);
+                    }
+                }
+                Collections.sort(timeCategories, (c1, c2) -> {
+                    int order1 = getTimeCategoryOrder(c1, sortAscending);
+                    int order2 = getTimeCategoryOrder(c2, sortAscending);
+                    return Integer.compare(order1, order2);
+                });
+
+                for (String timeCategory : timeCategories) {
+                    itemList.add(timeCategory);
+                    List<Task> timeCategoryTasks = new ArrayList<>();
+                    for (Task task : tasks) {
+                        if (timeCategory.equals(getTimeCategory(task.getTime()))) {
+                            timeCategoryTasks.add(task);
+                        }
+                    }
+                    Collections.sort(timeCategoryTasks, (t1, t2) -> {
+                        String time1 = t1.getTime() != null ? t1.getTime() : "";
+                        String time2 = t2.getTime() != null ? t2.getTime() : "";
+                        if (time1.isEmpty() && time2.isEmpty()) return 0;
+                        if (time1.isEmpty()) return -1;
+                        if (time2.isEmpty()) return 1;
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                            Date date1 = sdf.parse(time1);
+                            Date date2 = sdf.parse(time2);
+                            return sortAscending ? date1.compareTo(date2) : date2.compareTo(date1);
+                        } catch (ParseException e) {
+                            return sortAscending ? time1.compareTo(time2) : time2.compareTo(time1);
+                        }
+                    });
+                    itemList.addAll(timeCategoryTasks);
+                }
+                break;
+
+            case DATE:
+                List<String> dates = new ArrayList<>();
+                for (Task task : tasks) {
+                    String date = task.getDate() != null && !task.getDate().isEmpty() ? task.getDate() : "Без даты";
+                    if (!dates.contains(date)) {
+                        dates.add(date);
+                    }
+                }
+                Collections.sort(dates, (d1, d2) -> {
+                    if (d1.equals("Без даты")) return -1;
+                    if (d2.equals("Без даты")) return 1;
+                    try {
+                        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                        Date date1 = sdf.parse(d1);
+                        Date date2 = sdf.parse(d2);
+                        return sortAscending ? date1.compareTo(date2) : date2.compareTo(date1);
+                    } catch (ParseException e) {
+                        return sortAscending ? d1.compareTo(d2) : d2.compareTo(d1);
+                    }
+                });
+
+                for (String date : dates) {
+                    itemList.add(date);
+                    List<Task> dateTasks = new ArrayList<>();
+                    for (Task task : tasks) {
+                        String taskDate = task.getDate() != null && !task.getDate().isEmpty() ? task.getDate() : "Без даты";
+                        if (taskDate.equals(date)) {
+                            dateTasks.add(task);
+                        }
+                    }
+                    Collections.sort(dateTasks, (t1, t2) -> {
+                        String time1 = t1.getTime() != null ? t1.getTime() : "";
+                        String time2 = t2.getTime() != null ? t2.getTime() : "";
+                        if (time1.isEmpty() && time2.isEmpty()) return 0;
+                        if (time1.isEmpty()) return -1;
+                        if (time2.isEmpty()) return 1;
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                            Date date1 = sdf.parse(time1);
+                            Date date2 = sdf.parse(time2);
+                            return date1.compareTo(date2); // Всегда по возрастанию времени
+                        } catch (ParseException e) {
+                            return time1.compareTo(time2);
+                        }
+                    });
+                    itemList.addAll(dateTasks);
+                }
+                break;
+
+            case PRIORITY:
+                Collections.sort(tasks, (t1, t2) -> {
+                    int priority1 = t1.getPriority();
+                    int priority2 = t2.getPriority();
+                    return sortAscending ? Integer.compare(priority2, priority1) : Integer.compare(priority1, priority2);
+                });
+                itemList.addAll(tasks);
+                break;
         }
-        database.close();
 
-        // Сортируем категории: "Без категории" — первая, остальные по алфавиту
-        List<String> sortedCategories = new ArrayList<>(categoryMap.keySet());
-        Collections.sort(sortedCategories, String.CASE_INSENSITIVE_ORDER);
-
-        final String noCategory = "Без категории";
-        if (sortedCategories.contains(noCategory)) {
-            sortedCategories.remove(noCategory);
-            sortedCategories.add(0, noCategory);
-        }
-
-        // Перебираем отсортированные категории
-        for (String category : sortedCategories) {
-            List<Task> tasks = categoryMap.get(category);
-
-            // Сортируем задачи внутри категории по твоей логике
-            tasks.sort((task1, task2) -> {
-                boolean t1NoDate = task1.getDate() == null || task1.getDate().isEmpty();
-                boolean t2NoDate = task2.getDate() == null || task2.getDate().isEmpty();
-
-                // 1. Без даты выше
-                if (t1NoDate && !t2NoDate) return -1;
-                if (!t1NoDate && t2NoDate) return 1;
-                if (t1NoDate && t2NoDate) return 0;
-
-                // 2. Сравниваем даты (если обе с датой)
-                int dateComparison = task1.getDate().compareTo(task2.getDate());
-                if (dateComparison != 0) return dateComparison;
-
-                // 3. Внутри одинаковой даты — задачи без времени выше
-                boolean t1NoTime = task1.getTime() == null || task1.getTime().isEmpty();
-                boolean t2NoTime = task2.getTime() == null || task2.getTime().isEmpty();
-
-                if (t1NoTime && !t2NoTime) return -1;
-                if (!t1NoTime && t2NoTime) return 1;
-                if (t1NoTime && t2NoTime) return 0;
-
-                // 4. Если обе с временем — сортируем по времени
-                return task1.getTime().compareTo(task2.getTime());
-            });
-
-            itemList.add(category); // Заголовок категории
-            itemList.addAll(tasks); // Все задачи из категории
-        }
-
+        adapter.notifyDataSetChanged();
+        recyclerView.smoothScrollToPosition(0);
         checkTasks();
     }
-
 
     private void checkTasks() {
         if (itemList.isEmpty()) {
             Random random = new Random();
-            String message = NO_TASK_MESSAGES[random.nextInt(NO_TASK_MESSAGES.length)];
+            String message = ALL_TASKS_NO_TASK_MESSAGES[random.nextInt(ALL_TASKS_NO_TASK_MESSAGES.length)];
             emptyTextView.setText(message);
             emptyTextView.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.GONE);
@@ -399,8 +469,22 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener{
 
     @Override
     public void onTaskUpdated() {
-        Log.d("TaskUpdated", "onTaskUpdated вызван");  // Лог, чтобы понять, что метод был вызван
+        Log.d("AllTasksFragment", "onTaskUpdated вызван");
         loadItems();
-      //  adapter.notifyDataSetChanged(); // Уведомляем адаптер, что данные обновились
+    }
+
+    public void setFilter(FilterType filterType, boolean sortAscending) {
+        this.currentFilter = filterType;
+        this.sortAscending = sortAscending;
+        Log.d("AllTasksFragment", "setFilter called with filter: " + filterType + ", sortAscending: " + sortAscending);
+        loadItems();
+    }
+
+    public FilterType getCurrentFilter() {
+        return currentFilter;
+    }
+
+    public boolean getSortAscending() {
+        return sortAscending;
     }
 }

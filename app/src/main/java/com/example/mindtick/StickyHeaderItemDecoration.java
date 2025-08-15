@@ -22,7 +22,7 @@ public class StickyHeaderItemDecoration extends RecyclerView.ItemDecoration {
     public StickyHeaderItemDecoration(StickyHeaderInterface listener) {
         this.listener = listener;
         // Рассчитываем 5dp в px для сдвига влево
-        headerOffset = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, Resources.getSystem().getDisplayMetrics());
+        headerOffset = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, Resources.getSystem().getDisplayMetrics());
     }
 
     @Override
