@@ -77,41 +77,8 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
     public void updateList(List<Task> tasks, FilterType filterType, boolean sortAscending) {
         itemList.clear();
         if (isCompletedScreen) {
-            // Сортировка по времени завершения
-            tasks.sort((t1, t2) -> {
-                if (t1.getCompletedAt() == null || t1.getCompletedAt().isEmpty()) return sortAscending ? -1 : 1;
-                if (t2.getCompletedAt() == null || t2.getCompletedAt().isEmpty()) return sortAscending ? 1 : -1;
-                SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
-                try {
-                    return sortAscending ?
-                            sdf.parse(t1.getCompletedAt()).compareTo(sdf.parse(t2.getCompletedAt())) :
-                            sdf.parse(t2.getCompletedAt()).compareTo(sdf.parse(t1.getCompletedAt()));
-                } catch (ParseException e) {
-                    Log.e("TaskAdapter", "Ошибка парсинга времени завершения: " + e.getMessage());
-                    return 0;
-                }
-            });
-
-            Map<String, List<Task>> groupedTasks = new LinkedHashMap<>();
-            for (Task task : tasks) {
-                String category = task.getCategory() != null && !task.getCategory().isEmpty() ? task.getCategory() : "Без категории";
-                groupedTasks.computeIfAbsent(category, k -> new ArrayList<>()).add(task);
-            }
-
-            List<String> sortedCategories = new ArrayList<>(groupedTasks.keySet());
-            Collections.sort(sortedCategories, sortAscending ? String.CASE_INSENSITIVE_ORDER : (o1, o2) -> o2.compareToIgnoreCase(o1));
-            if (sortedCategories.contains("Без категории")) {
-                sortedCategories.remove("Без категории");
-                sortedCategories.add(0, "Без категории");
-            }
-
-            for (String category : sortedCategories) {
-                List<Task> categoryTasks = groupedTasks.get(category);
-                if (!categoryTasks.isEmpty()) {
-                    itemList.add(category);
-                    itemList.addAll(categoryTasks);
-                }
-            }
+            // Для DoneFragment просто обновляем itemList без сортировки, так как он уже сформирован
+            itemList.addAll(tasks);
         } else {
             // Для "Сегодня" и "Все задачи"
             switch (filterType) {
@@ -132,12 +99,50 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
                         List<Task> groupTasks = entry.getValue();
                         if (!groupTasks.isEmpty()) {
                             groupTasks.sort((t1, t2) -> {
-                                boolean t1Empty = t1.getTime() == null || t1.getTime().isEmpty();
-                                boolean t2Empty = t2.getTime() == null || t2.getTime().isEmpty();
-                                if (t1Empty && t2Empty) return 0;
-                                if (t1Empty) return sortAscending ? -1 : 1;
-                                if (t2Empty) return sortAscending ? 1 : -1;
-                                return sortAscending ? t1.getTime().compareTo(t2.getTime()) : t2.getTime().compareTo(t1.getTime());
+                                String date1 = t1.getDate() != null ? t1.getDate() : "";
+                                String date2 = t2.getDate() != null ? t2.getDate() : "";
+                                if (date1.isEmpty() && date2.isEmpty()) {
+                                    String time1 = t1.getTime() != null ? t1.getTime() : "";
+                                    String time2 = t2.getTime() != null ? t2.getTime() : "";
+                                    if (time1.isEmpty() && time2.isEmpty()) return 0;
+                                    if (time1.isEmpty()) return sortAscending ? -1 : 1;
+                                    if (time2.isEmpty()) return sortAscending ? 1 : -1;
+                                    try {
+                                        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                                        Date timeDate1 = sdf.parse(time1);
+                                        Date timeDate2 = sdf.parse(time2);
+                                        return sortAscending ? timeDate1.compareTo(timeDate2) : timeDate2.compareTo(timeDate1);
+                                    } catch (ParseException e) {
+                                        Log.e("TaskAdapter", "Error parsing time in TIME: " + time1 + " vs " + time2, e);
+                                        return sortAscending ? time1.compareTo(time2) : time2.compareTo(time1);
+                                    }
+                                }
+                                if (date1.isEmpty()) return sortAscending ? -1 : 1;
+                                if (date2.isEmpty()) return sortAscending ? 1 : -1;
+                                try {
+                                    SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                                    Date dateDate1 = sdf.parse(date1);
+                                    Date dateDate2 = sdf.parse(date2);
+                                    int dateComparison = dateDate1.compareTo(dateDate2);
+                                    if (dateComparison != 0) return sortAscending ? dateComparison : -dateComparison;
+                                    String time1 = t1.getTime() != null ? t1.getTime() : "";
+                                    String time2 = t2.getTime() != null ? t2.getTime() : "";
+                                    if (time1.isEmpty() && time2.isEmpty()) return 0;
+                                    if (time1.isEmpty()) return sortAscending ? -1 : 1;
+                                    if (time2.isEmpty()) return sortAscending ? 1 : -1;
+                                    try {
+                                        SimpleDateFormat timeSdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                                        Date timeDate1 = timeSdf.parse(time1);
+                                        Date timeDate2 = timeSdf.parse(time2);
+                                        return sortAscending ? timeDate1.compareTo(timeDate2) : timeDate2.compareTo(timeDate1);
+                                    } catch (ParseException e) {
+                                        Log.e("TaskAdapter", "Error parsing time in TIME: " + time1 + " vs " + time2, e);
+                                        return sortAscending ? time1.compareTo(time2) : time2.compareTo(time1);
+                                    }
+                                } catch (ParseException e) {
+                                    Log.e("TaskAdapter", "Error parsing date in TIME: " + date1 + " vs " + date2, e);
+                                    return sortAscending ? date1.compareTo(date2) : date2.compareTo(date1);
+                                }
                             });
                             itemList.add(entry.getKey());
                             itemList.addAll(groupTasks);
@@ -163,9 +168,50 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
                         List<Task> categoryTasks = categoryGroups.get(category);
                         if (!categoryTasks.isEmpty()) {
                             categoryTasks.sort((t1, t2) -> {
-                                String c1 = t1.getCategory() != null && !t1.getCategory().isEmpty() ? t1.getCategory() : "Без категории";
-                                String c2 = t2.getCategory() != null && !t2.getCategory().isEmpty() ? t2.getCategory() : "Без категории";
-                                return sortAscending ? c1.compareTo(c2) : c2.compareTo(c1);
+                                String date1 = t1.getDate() != null ? t1.getDate() : "";
+                                String date2 = t2.getDate() != null ? t2.getDate() : "";
+                                if (date1.isEmpty() && date2.isEmpty()) {
+                                    String time1 = t1.getTime() != null ? t1.getTime() : "";
+                                    String time2 = t2.getTime() != null ? t2.getTime() : "";
+                                    if (time1.isEmpty() && time2.isEmpty()) return 0;
+                                    if (time1.isEmpty()) return sortAscending ? -1 : 1;
+                                    if (time2.isEmpty()) return sortAscending ? 1 : -1;
+                                    try {
+                                        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                                        Date timeDate1 = sdf.parse(time1);
+                                        Date timeDate2 = sdf.parse(time2);
+                                        return sortAscending ? timeDate1.compareTo(timeDate2) : timeDate2.compareTo(timeDate1);
+                                    } catch (ParseException e) {
+                                        Log.e("TaskAdapter", "Error parsing time in CATEGORY: " + time1 + " vs " + time2, e);
+                                        return sortAscending ? time1.compareTo(time2) : time2.compareTo(time1);
+                                    }
+                                }
+                                if (date1.isEmpty()) return sortAscending ? -1 : 1;
+                                if (date2.isEmpty()) return sortAscending ? 1 : -1;
+                                try {
+                                    SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                                    Date dateDate1 = sdf.parse(date1);
+                                    Date dateDate2 = sdf.parse(date2);
+                                    int dateComparison = dateDate1.compareTo(dateDate2);
+                                    if (dateComparison != 0) return sortAscending ? dateComparison : -dateComparison;
+                                    String time1 = t1.getTime() != null ? t1.getTime() : "";
+                                    String time2 = t2.getTime() != null ? t2.getTime() : "";
+                                    if (time1.isEmpty() && time2.isEmpty()) return 0;
+                                    if (time1.isEmpty()) return sortAscending ? -1 : 1;
+                                    if (time2.isEmpty()) return sortAscending ? 1 : -1;
+                                    try {
+                                        SimpleDateFormat timeSdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                                        Date timeDate1 = timeSdf.parse(time1);
+                                        Date timeDate2 = timeSdf.parse(time2);
+                                        return sortAscending ? timeDate1.compareTo(timeDate2) : timeDate2.compareTo(timeDate1);
+                                    } catch (ParseException e) {
+                                        Log.e("TaskAdapter", "Error parsing time in CATEGORY: " + time1 + " vs " + time2, e);
+                                        return sortAscending ? time1.compareTo(time2) : time2.compareTo(time1);
+                                    }
+                                } catch (ParseException e) {
+                                    Log.e("TaskAdapter", "Error parsing date in CATEGORY: " + date1 + " vs " + date2, e);
+                                    return sortAscending ? date1.compareTo(date2) : date2.compareTo(date1);
+                                }
                             });
                             itemList.add(category);
                             itemList.addAll(categoryTasks);
@@ -174,9 +220,56 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
                     break;
 
                 case PRIORITY:
-                    tasks.sort((t1, t2) -> sortAscending ?
-                            Integer.compare(t1.getPriority(), t2.getPriority()) :
-                            Integer.compare(t2.getPriority(), t1.getPriority()));
+                    tasks.sort((t1, t2) -> {
+                        int priority1 = t1.getPriority();
+                        int priority2 = t2.getPriority();
+                        int priorityComparison = sortAscending ? Integer.compare(priority1, priority2) : Integer.compare(priority2, priority1);
+                        if (priorityComparison != 0) return priorityComparison;
+                        String date1 = t1.getDate() != null ? t1.getDate() : "";
+                        String date2 = t2.getDate() != null ? t2.getDate() : "";
+                        if (date1.isEmpty() && date2.isEmpty()) {
+                            String time1 = t1.getTime() != null ? t1.getTime() : "";
+                            String time2 = t2.getTime() != null ? t2.getTime() : "";
+                            if (time1.isEmpty() && time2.isEmpty()) return 0;
+                            if (time1.isEmpty()) return sortAscending ? -1 : 1;
+                            if (time2.isEmpty()) return sortAscending ? 1 : -1;
+                            try {
+                                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                                Date timeDate1 = sdf.parse(time1);
+                                Date timeDate2 = sdf.parse(time2);
+                                return sortAscending ? timeDate1.compareTo(timeDate2) : timeDate2.compareTo(timeDate1);
+                            } catch (ParseException e) {
+                                Log.e("TaskAdapter", "Error parsing time in PRIORITY: " + time1 + " vs " + time2, e);
+                                return sortAscending ? time1.compareTo(time2) : time2.compareTo(time1);
+                            }
+                        }
+                        if (date1.isEmpty()) return sortAscending ? -1 : 1;
+                        if (date2.isEmpty()) return sortAscending ? 1 : -1;
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                            Date dateDate1 = sdf.parse(date1);
+                            Date dateDate2 = sdf.parse(date2);
+                            int dateComparison = dateDate1.compareTo(dateDate2);
+                            if (dateComparison != 0) return sortAscending ? dateComparison : -dateComparison;
+                            String time1 = t1.getTime() != null ? t1.getTime() : "";
+                            String time2 = t2.getTime() != null ? t2.getTime() : "";
+                            if (time1.isEmpty() && time2.isEmpty()) return 0;
+                            if (time1.isEmpty()) return sortAscending ? -1 : 1;
+                            if (time2.isEmpty()) return sortAscending ? 1 : -1;
+                            try {
+                                SimpleDateFormat timeSdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                                Date timeDate1 = timeSdf.parse(time1);
+                                Date timeDate2 = timeSdf.parse(time2);
+                                return sortAscending ? timeDate1.compareTo(timeDate2) : timeDate2.compareTo(timeDate1);
+                            } catch (ParseException e) {
+                                Log.e("TaskAdapter", "Error parsing time in PRIORITY: " + time1 + " vs " + time2, e);
+                                return sortAscending ? time1.compareTo(time2) : time2.compareTo(time1);
+                            }
+                        } catch (ParseException e) {
+                            Log.e("TaskAdapter", "Error parsing date in PRIORITY: " + date1 + " vs " + date2, e);
+                            return sortAscending ? date1.compareTo(date2) : date2.compareTo(date1);
+                        }
+                    });
 
                     Map<String, List<Task>> priorityGroups = new LinkedHashMap<>();
                     priorityGroups.put("Высокий", new ArrayList<>());
@@ -217,7 +310,7 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
             if (hour < 18) return "День (12:00–18:00)";
             return "Вечер (18:00–24:00)";
         } catch (ParseException e) {
-            Log.e("TaskAdapter", "Ошибка парсинга времени: " + e.getMessage());
+            Log.e("TaskAdapter", "Ошибка парсинга времени: " + time, e);
             return "Без времени";
         }
     }
@@ -289,15 +382,29 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
     }
 
     private boolean isTaskOverdue(String date, String time) {
-        if (date == null || date.isEmpty() || time == null || time.isEmpty()) {
-            return false;
+        if (date == null || date.isEmpty()) {
+            return false; // Без даты задача не может быть просроченной
         }
-        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
+        SimpleDateFormat dateSdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
         try {
-            Date taskDateTime = sdf.parse(date + " " + time);
-            return taskDateTime != null && taskDateTime.before(new Date());
+            Date taskDate = dateSdf.parse(date);
+            Date currentDate = new Date();
+            String currentDateStr = dateSdf.format(currentDate);
+            Date currentDateOnly = dateSdf.parse(currentDateStr);
+
+            // Если дата < текущей, задача просрочена
+            if (taskDate.before(currentDateOnly)) {
+                return true;
+            }
+            // Если дата = текущей, проверяем время
+            if (taskDate.equals(currentDateOnly) && time != null && !time.isEmpty()) {
+                SimpleDateFormat sdfWithTime = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
+                Date taskDateTime = sdfWithTime.parse(date + " " + time);
+                return taskDateTime != null && taskDateTime.before(currentDate);
+            }
+            return false;
         } catch (ParseException e) {
-            Log.e("TaskAdapter", "Ошибка парсинга даты/времени: " + e.getMessage());
+            Log.e("TaskAdapter", "Ошибка парсинга даты/времени: " + date + " " + time, e);
             return false;
         }
     }
@@ -310,39 +417,13 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
             Log.d("TaskAdapter", "Binding header at position " + position + ": [" + category + "]");
         } else {
             Task task = (Task) itemList.get(position);
-            holder.itemView.setOnClickListener(v -> {
-                if (isCompletedScreen) {
-                    Toast.makeText(context, "Редактирование запрещено. Восстановите задачу для изменений.", Toast.LENGTH_SHORT).show();
-                } else {
-                    String returnFragmentTag = isTodayScreen ? "TodayFragment" : isAllTasksScreen ? "AllTasksFragment" : "DoneFragment";
-                    Intent intent = new Intent(context, EditTask.class);
-                    intent.putExtra("task_id", task.getId());
-                    intent.putExtra("returnFragment", returnFragmentTag);
-                    ((Activity) context).startActivityForResult(intent, EditTask.REQUEST_EDIT_TASK);
-                    ((Activity) context).overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
-                }
-            });
-
             TaskViewHolder taskHolder = (TaskViewHolder) holder;
             taskHolder.tvTitle.setText(task.getTitle());
-            taskHolder.tvDescription.setText(task.getDescription().isEmpty() ? "Описание не установлено" : task.getDescription());
+            taskHolder.tvDescription.setText(task.getDescription() != null && !task.getDescription().isEmpty() ? task.getDescription() : "Описание не установлено");
 
-            if (!isCompletedScreen) {
-                if (isTaskOverdue(task.getDate(), task.getTime())) {
-                    taskHolder.tvNextExecutionTime.setTextColor(ContextCompat.getColor(context, R.color.red));
-                    if (task.getReminderEnabled() == 1) {
-                        task.setReminderEnabled(0);
-                        taskHolder.switchReminder.setChecked(false);
-                        SQLiteDatabase database = db.getWritableDatabase();
-                        ContentValues values = new ContentValues();
-                        values.put(Util.KEY_REMINDER_ENABLED, 0);
-                        database.update(Util.TABLE_NAME, values, Util.KEY_ID + " = ?", new String[]{String.valueOf(task.getId())});
-                        database.close();
-                    }
-                } else {
-                    taskHolder.tvNextExecutionTime.setTextColor(ContextCompat.getColor(context, R.color.title_text));
-                }
-            }
+            Log.d("TaskAdapter", "Binding task at position " + position + ": Title: " + task.getTitle() +
+                    ", Date: " + task.getDate() + ", Time: " + task.getTime() +
+                    ", isAllTasksScreen: " + isAllTasksScreen + ", isTodayScreen: " + isTodayScreen);
 
             if (isCompletedScreen) {
                 if (task.getCompletedAt() != null && !task.getCompletedAt().isEmpty()) {
@@ -350,24 +431,60 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
                 } else {
                     taskHolder.tvNextExecutionTime.setText("Завершено: Не указано");
                 }
-            } else if (isTodayScreen) {
-                if (task.getTime() != null && !task.getTime().isEmpty()) {
-                    taskHolder.tvNextExecutionTime.setText(task.getTime());
-                } else {
-                    taskHolder.tvNextExecutionTime.setText("Время не установлено");
-                }
-            } else if (isAllTasksScreen) {
-                if (task.getDate() != null && !task.getDate().isEmpty()) {
-                    if (task.getTime() != null && !task.getTime().isEmpty()) {
-                        taskHolder.tvNextExecutionTime.setText(task.getDate() + " " + task.getTime());
+                taskHolder.tvNextExecutionTime.setTextColor(ContextCompat.getColor(context, R.color.title_text));
+            } else {
+                String date = task.getDate() != null ? task.getDate() : "";
+                String time = task.getTime() != null ? task.getTime() : "";
+                boolean isOverdue = isTaskOverdue(date, time);
+                SimpleDateFormat dateSdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                String currentDateStr = dateSdf.format(new Date());
+                String yesterdayDateStr = dateSdf.format(new Date(new Date().getTime() - 24 * 60 * 60 * 1000));
+
+                if (isTodayScreen) {
+                    if (isOverdue) {
+                        String displayDate;
+                        if (date.equals(currentDateStr)) {
+                            displayDate = "Сегодня";
+                        } else if (date.equals(yesterdayDateStr)) {
+                            displayDate = "Вчера";
+                        } else {
+                            displayDate = date;
+                        }
+                        taskHolder.tvNextExecutionTime.setText("Просрочено: " + (time.isEmpty() ? displayDate : displayDate + " " + time));
+                        taskHolder.tvNextExecutionTime.setTextColor(ContextCompat.getColor(context, R.color.red));
+                    } else if (date.isEmpty()) {
+                        taskHolder.tvNextExecutionTime.setText("Без даты и времени");
+                        taskHolder.tvNextExecutionTime.setTextColor(ContextCompat.getColor(context, android.R.color.darker_gray));
+                    } else if (time.isEmpty()) {
+                        taskHolder.tvNextExecutionTime.setText("Сегодня, без времени");
+                        taskHolder.tvNextExecutionTime.setTextColor(ContextCompat.getColor(context, android.R.color.darker_gray));
                     } else {
-                        taskHolder.tvNextExecutionTime.setText(task.getDate());
+                        taskHolder.tvNextExecutionTime.setText("Сегодня, " + time);
+                        taskHolder.tvNextExecutionTime.setTextColor(ContextCompat.getColor(context, R.color.title_text));
+                    }
+                } else if (isAllTasksScreen) {
+                    if (date.isEmpty()) {
+                        taskHolder.tvNextExecutionTime.setText("Без даты");
+                        taskHolder.tvNextExecutionTime.setTextColor(ContextCompat.getColor(context, android.R.color.darker_gray));
+                    } else {
+                        String dateTime = time.isEmpty() ? date : date + " " + time;
+                        taskHolder.tvNextExecutionTime.setText(dateTime);
+                        taskHolder.tvNextExecutionTime.setTextColor(ContextCompat.getColor(context, R.color.title_text));
                     }
                 } else {
-                    taskHolder.tvNextExecutionTime.setText("Дата не установлена");
+                    taskHolder.tvNextExecutionTime.setText("");
+                    taskHolder.tvNextExecutionTime.setTextColor(ContextCompat.getColor(context, R.color.title_text));
                 }
-            } else {
-                taskHolder.tvNextExecutionTime.setText("");
+
+                if (isOverdue && task.getReminderEnabled() == 1) {
+                    task.setReminderEnabled(0);
+                    taskHolder.switchReminder.setChecked(false);
+                    SQLiteDatabase database = db.getWritableDatabase();
+                    ContentValues values = new ContentValues();
+                    values.put(Util.KEY_REMINDER_ENABLED, 0);
+                    database.update(Util.TABLE_NAME, values, Util.KEY_ID + " = ?", new String[]{String.valueOf(task.getId())});
+                    database.close();
+                }
             }
 
             taskHolder.ivPriorityR.setVisibility(View.GONE);
@@ -431,6 +548,19 @@ public class TaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> i
                 int rowsUpdated = database.update(Util.TABLE_NAME, values, Util.KEY_ID + " = ?", new String[]{String.valueOf(freshTask.getId())});
                 Log.d("TaskAdapter", "Database updated rows: " + rowsUpdated + " for task id " + freshTask.getId());
                 database.close();
+            });
+
+            holder.itemView.setOnClickListener(v -> {
+                if (isCompletedScreen) {
+                    Toast.makeText(context, "Редактирование запрещено. Восстановите задачу для изменений.", Toast.LENGTH_SHORT).show();
+                } else {
+                    String returnFragmentTag = isTodayScreen ? "TodayFragment" : isAllTasksScreen ? "AllTasksFragment" : "DoneFragment";
+                    Intent intent = new Intent(context, EditTask.class);
+                    intent.putExtra("task_id", task.getId());
+                    intent.putExtra("returnFragment", returnFragmentTag);
+                    ((Activity) context).startActivityForResult(intent, EditTask.REQUEST_EDIT_TASK);
+                    ((Activity) context).overridePendingTransition(R.anim.fade_in_activity, R.anim.fade_out_activity);
+                }
             });
         }
     }

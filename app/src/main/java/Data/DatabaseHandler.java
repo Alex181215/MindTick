@@ -267,4 +267,78 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         Log.d(TAG, "getCompletedTasks возвращает " + taskList.size() + " задач");
         return taskList;
     }
+
+    public List<Task> getTodayAndOverdueTasks(String currentDate) {
+        Log.d(TAG, "getTodayAndOverdueTasks вызван для даты: " + currentDate);
+        List<Task> taskList = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(Util.TABLE_NAME,
+                new String[]{Util.KEY_ID, Util.KEY_TITLE, Util.KEY_DATE, Util.KEY_TIME,
+                        Util.KEY_CATEGORY, Util.KEY_DESCRIPTION, Util.KEY_PRIORITY,
+                        Util.KEY_STATUS, Util.KEY_COMPLETED_AT,
+                        Util.KEY_REMINDER_ENABLED, Util.KEY_PREVIOUS_REMINDER_ENABLED},
+                Util.KEY_DATE + " <= ? AND " + Util.KEY_DATE + " IS NOT NULL AND " + Util.KEY_DATE + " != '' AND " + Util.KEY_STATUS + " = ?",
+                new String[]{currentDate, "1"},
+                null, null, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                Task task = new Task();
+                task.setId(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_ID)));
+                task.setTitle(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_TITLE)));
+                task.setDate(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_DATE)));
+                task.setTime(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_TIME)));
+                task.setCategory(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_CATEGORY)));
+                task.setDescription(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_DESCRIPTION)));
+                task.setPriority(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_PRIORITY)));
+                task.setStatus(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_STATUS)));
+                task.setCompletedAt(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_COMPLETED_AT)));
+                task.setReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_REMINDER_ENABLED)));
+                task.setPreviousReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_PREVIOUS_REMINDER_ENABLED)));
+                taskList.add(task);
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+        db.close();
+        Log.d(TAG, "getTodayAndOverdueTasks возвращает " + taskList.size() + " задач");
+        return taskList;
+    }
+
+    public List<Task> getUpcomingTasks(String currentDate) {
+        Log.d(TAG, "getUpcomingTasks вызван для даты: " + currentDate);
+        List<Task> taskList = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(Util.TABLE_NAME,
+                new String[]{Util.KEY_ID, Util.KEY_TITLE, Util.KEY_DATE, Util.KEY_TIME,
+                        Util.KEY_CATEGORY, Util.KEY_DESCRIPTION, Util.KEY_PRIORITY,
+                        Util.KEY_STATUS, Util.KEY_COMPLETED_AT,
+                        Util.KEY_REMINDER_ENABLED, Util.KEY_PREVIOUS_REMINDER_ENABLED},
+                "(" + Util.KEY_DATE + " > ? OR " + Util.KEY_DATE + " IS NULL OR " + Util.KEY_DATE + " = '') AND " + Util.KEY_STATUS + " = ?",
+                new String[]{currentDate, "1"},
+                null, null, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                Task task = new Task();
+                task.setId(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_ID)));
+                task.setTitle(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_TITLE)));
+                task.setDate(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_DATE)));
+                task.setTime(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_TIME)));
+                task.setCategory(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_CATEGORY)));
+                task.setDescription(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_DESCRIPTION)));
+                task.setPriority(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_PRIORITY)));
+                task.setStatus(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_STATUS)));
+                task.setCompletedAt(cursor.getString(cursor.getColumnIndexOrThrow(Util.KEY_COMPLETED_AT)));
+                task.setReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_REMINDER_ENABLED)));
+                task.setPreviousReminderEnabled(cursor.getInt(cursor.getColumnIndexOrThrow(Util.KEY_PREVIOUS_REMINDER_ENABLED)));
+                taskList.add(task);
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+        db.close();
+        Log.d(TAG, "getUpcomingTasks возвращает " + taskList.size() + " задач");
+        return taskList;
+    }
 }

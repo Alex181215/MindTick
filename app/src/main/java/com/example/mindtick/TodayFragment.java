@@ -56,7 +56,7 @@ public class TodayFragment extends Fragment implements OnTaskUpdatedListener {
             "Сегодня твой день. Заполни его задачами, которые приближают тебя к цели! 🎯",
             "Продуктивность начинается с первого шага. Какой будет твой? 👣",
             "Если не запланировать дела – они не сделаются сами. Время действовать! 🕒",
-            "Секрет успеха – ставить цели и достигать их. Что в плане на сегодня? 🏆",
+            "Секрет успеха – ставить цели и достигать их. Чего хочешь ты? 🏆",
             "Сегодня – шанс сделать шаг к мечте. Добавь задачу! 💡",
             "Хочешь, чтобы день прошел продуктивно? Спланируй его! 📌",
             "Мир принадлежит тем, кто умеет ставить цели. Чего хочешь ты? 🌍",
@@ -85,6 +85,7 @@ public class TodayFragment extends Fragment implements OnTaskUpdatedListener {
 
         recyclerView.setAdapter(adapter);
         recyclerView.addItemDecoration(new StickyHeaderItemDecoration(adapter));
+        recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
         ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(0,
                 ItemTouchHelper.RIGHT | ItemTouchHelper.LEFT) {
@@ -200,7 +201,7 @@ public class TodayFragment extends Fragment implements OnTaskUpdatedListener {
 
         itemList.remove(position);
         recyclerView.getAdapter().notifyItemRemoved(position);
-        checkAndRemoveEmptyCategory(task);
+        checkAndRemoveEmptyHeader(task);
         checkTasks();
     }
 
@@ -217,26 +218,39 @@ public class TodayFragment extends Fragment implements OnTaskUpdatedListener {
 
         itemList.remove(position);
         recyclerView.getAdapter().notifyItemRemoved(position);
-        checkAndRemoveEmptyCategory(task);
+        checkAndRemoveEmptyHeader(task);
         checkTasks();
     }
 
-    private void checkAndRemoveEmptyCategory(Task task) {
-        final String category = task.getCategory() != null && !task.getCategory().isEmpty() ? task.getCategory() : "Без категории";
-        boolean isCategoryEmpty = true;
+    private void checkAndRemoveEmptyHeader(Task task) {
+        final String header;
+        if (currentFilter == FilterType.CATEGORY) {
+            header = task.getCategory() != null && !task.getCategory().isEmpty() ? task.getCategory() : "Без категории";
+        } else if (currentFilter == FilterType.TIME) {
+            header = getTimeCategory(task.getTime());
+        } else {
+            return;
+        }
+
+        boolean isHeaderEmpty = true;
         for (Object obj : itemList) {
             if (obj instanceof Task) {
                 Task currentTask = (Task) obj;
-                String taskCategory = currentTask.getCategory() != null && !currentTask.getCategory().isEmpty() ? currentTask.getCategory() : "Без категории";
-                if (category.equals(taskCategory)) {
-                    isCategoryEmpty = false;
+                String taskHeader = null;
+                if (currentFilter == FilterType.CATEGORY) {
+                    taskHeader = currentTask.getCategory() != null && !currentTask.getCategory().isEmpty() ? currentTask.getCategory() : "Без категории";
+                } else if (currentFilter == FilterType.TIME) {
+                    taskHeader = getTimeCategory(currentTask.getTime());
+                }
+                if (header.equals(taskHeader)) {
+                    isHeaderEmpty = false;
                     break;
                 }
             }
         }
 
-        if (isCategoryEmpty) {
-            itemList.removeIf(obj -> obj instanceof String && obj.equals(category));
+        if (isHeaderEmpty) {
+            itemList.removeIf(obj -> obj instanceof String && obj.equals(header));
             recyclerView.getAdapter().notifyDataSetChanged();
         }
     }
@@ -272,8 +286,8 @@ public class TodayFragment extends Fragment implements OnTaskUpdatedListener {
 
     private void loadItems() {
         itemList.clear();
-        String today = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(new Date());
-        List<Task> tasks = db.getTasksByDate(today);
+        String currentDate = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(new Date());
+        List<Task> tasks = db.getTodayAndOverdueTasks(currentDate);
 
         Log.d("TodayFragment", "Applying filter: " + currentFilter + ", sortAscending: " + sortAscending);
 

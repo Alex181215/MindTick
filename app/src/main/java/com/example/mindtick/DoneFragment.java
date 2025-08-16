@@ -86,6 +86,7 @@ public class DoneFragment extends Fragment implements OnTaskUpdatedListener {
         });
         recyclerView.setAdapter(adapter);
         recyclerView.addItemDecoration(new StickyHeaderItemDecoration(adapter));
+        recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
         ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(0,
                 ItemTouchHelper.RIGHT | ItemTouchHelper.LEFT) {
@@ -264,15 +265,15 @@ public class DoneFragment extends Fragment implements OnTaskUpdatedListener {
                 String completedAt1 = t1.getCompletedAt() != null ? t1.getCompletedAt() : "";
                 String completedAt2 = t2.getCompletedAt() != null ? t2.getCompletedAt() : "";
                 if (completedAt1.isEmpty() && completedAt2.isEmpty()) return 0;
-                if (completedAt1.isEmpty()) return -1;
-                if (completedAt2.isEmpty()) return 1;
+                if (completedAt1.isEmpty()) return sortAscending ? -1 : 1;
+                if (completedAt2.isEmpty()) return sortAscending ? 1 : -1;
                 try {
                     SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
                     Date date1 = sdf.parse(completedAt1);
                     Date date2 = sdf.parse(completedAt2);
-                    return date1.compareTo(date2); // Всегда по возрастанию времени завершения
+                    return sortAscending ? date1.compareTo(date2) : date2.compareTo(date1);
                 } catch (ParseException e) {
-                    return completedAt1.compareTo(completedAt2);
+                    return sortAscending ? completedAt1.compareTo(completedAt2) : completedAt2.compareTo(completedAt1);
                 }
             });
             itemList.addAll(dateTasks);

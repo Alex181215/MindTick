@@ -36,7 +36,7 @@ import Utils.FilterType;
 import Utils.ReminderHelper;
 import Utils.Util;
 
-public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener {
+public class AllTasksFragment extends Fragment implements TaskAdapter.OnTaskUpdatedListener {
     private RecyclerView recyclerView;
     private TextView emptyTextView;
     private List<Object> itemList = new ArrayList<>();
@@ -45,27 +45,12 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
     private FilterType currentFilter = FilterType.CATEGORY;
     private boolean sortAscending = true;
 
-    private static final String[] ALL_TASKS_NO_TASK_MESSAGES = {
-            "Список задач пуст... Пора добавить что-то новенькое! 📅",
-            "Никаких задач? Самое время спланировать что-то крутое! ✍️",
-            "Пусто, как в космосе! Добавь задачи, чтобы заполнить пространство! 🌌",
-            "Без задач жизнь скучна. Давай добавим немного дел! 🚀",
-            "Список задач пуст. Начни с малого – добавь одну задачу! ✅",
-            "Чистый лист ждёт твоих идей. Что запланируешь? 💡",
-            "Ни одной задачи? Это шанс начать с чистого листа! 📝",
-            "Пустота в задачах – это возможность для новых целей! 🎯",
-            "Добавь задачу, чтобы этот список ожил! ✨",
-            "Нет задач? Время организовать свой день! ⏳",
-            "Список пуст – пора наполнить его планами! 📌",
-            "Без задач не достичь целей. Давай начнём! 🏆",
-            "Пустой список – это приглашение к действию! 🔥",
-            "Что будем делать? Добавь задачу и начни! 👣",
-            "Список задач пуст. Давай сделаем его продуктивным! 💪",
-            "Чистый список – идеальная возможность для новых идей! 🌞",
-            "Пора добавить задачу и начать движение к цели! 🚀",
-            "Без задач? Запланируй что-то интересное! 🤩",
-            "Список ждёт твоих планов. С чего начнём? 📖",
-            "Пусто? Добавь задачу и сделай день продуктивным! ✅"
+    private static final String[] NO_TASK_MESSAGES = {
+            "Пока нет задач... Добавь новые планы! 📅",
+            "Список пуст! Пора запланировать что-то крутое! ✍️",
+            "Без задач? Время строить большие планы! 🚀",
+            "Добавь задачу и начни двигаться к цели! 🎯",
+            "Чистый лист – идеально для новых идей! 💡"
     };
 
     @Nullable
@@ -77,7 +62,7 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
         emptyTextView = view.findViewById(R.id.emptyTextView);
 
         db = new DatabaseHandler(getContext());
-        adapter = new TaskAdapter(getContext(), itemList, true, db, false, false, this);
+        adapter = new TaskAdapter(getContext(), itemList, false, db, false, true, this);
         adapter.setOnTaskUpdatedListener(() -> {
             Log.d("AllTasksFragment", "Обновляем задачи после изменения");
             loadItems();
@@ -85,6 +70,7 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
 
         recyclerView.setAdapter(adapter);
         recyclerView.addItemDecoration(new StickyHeaderItemDecoration(adapter));
+        recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
         ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(0,
                 ItemTouchHelper.RIGHT | ItemTouchHelper.LEFT) {
@@ -178,17 +164,11 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
         ContentValues values = new ContentValues();
 
         String completedAt = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(new Date());
-        Log.d("CompleteDebug", "Saving prevReminder: " + task.getReminderEnabled());
         values.put(Util.KEY_STATUS, 0);
         values.put(Util.KEY_COMPLETED_AT, completedAt);
         values.put(Util.KEY_PREVIOUS_REMINDER_ENABLED, task.getReminderEnabled());
         values.put(Util.KEY_REMINDER_ENABLED, 0);
 
-        if (task.getTime().isEmpty()) {
-            Log.d("CompleteDebug", "No time set for this task.");
-        }
-
-        Log.d("CompleteDebug", "Time before update: " + task.getTime());
         database.update(Util.TABLE_NAME, values, Util.KEY_ID + " = ?", new String[]{String.valueOf(task.getId())});
         database.close();
 
@@ -273,6 +253,7 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
             if (hour >= 18 && hour < 24) return "Вечер";
             return "Ночь";
         } catch (ParseException e) {
+            Log.e("AllTasksFragment", "Error parsing time: " + time, e);
             return "Без времени";
         }
     }
@@ -289,9 +270,13 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
 
     private void loadItems() {
         itemList.clear();
-        List<Task> tasks = db.getAllTasks();
+        String currentDate = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(new Date());
+        List<Task> tasks = db.getUpcomingTasks(currentDate);
 
-        Log.d("AllTasksFragment", "Applying filter: " + currentFilter + ", sortAscending: " + sortAscending);
+        Log.d("AllTasksFragment", "Applying filter: " + currentFilter + ", sortAscending: " + sortAscending + ", tasks fetched: " + tasks.size());
+        for (Task task : tasks) {
+            Log.d("AllTasksFragment", "Task: " + task.getTitle() + ", Date: " + task.getDate() + ", Time: " + task.getTime() + ", Status: " + task.getStatus());
+        }
 
         if (tasks.isEmpty()) {
             checkTasks();
@@ -324,18 +309,49 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
                         }
                     }
                     Collections.sort(categoryTasks, (t1, t2) -> {
-                        String time1 = t1.getTime() != null ? t1.getTime() : "";
-                        String time2 = t2.getTime() != null ? t2.getTime() : "";
-                        if (time1.isEmpty() && time2.isEmpty()) return 0;
-                        if (time1.isEmpty()) return -1;
-                        if (time2.isEmpty()) return 1;
+                        String date1 = t1.getDate() != null ? t1.getDate() : "";
+                        String date2 = t2.getDate() != null ? t2.getDate() : "";
+                        if (date1.isEmpty() && date2.isEmpty()) {
+                            String time1 = t1.getTime() != null ? t1.getTime() : "";
+                            String time2 = t2.getTime() != null ? t2.getTime() : "";
+                            if (time1.isEmpty() && time2.isEmpty()) return 0;
+                            if (time1.isEmpty()) return -1;
+                            if (time2.isEmpty()) return 1;
+                            try {
+                                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                                Date timeDate1 = sdf.parse(time1);
+                                Date timeDate2 = sdf.parse(time2);
+                                return timeDate1.compareTo(timeDate2);
+                            } catch (ParseException e) {
+                                Log.e("AllTasksFragment", "Error parsing time in CATEGORY: " + time1 + " vs " + time2, e);
+                                return time1.compareTo(time2);
+                            }
+                        }
+                        if (date1.isEmpty()) return -1;
+                        if (date2.isEmpty()) return 1;
                         try {
-                            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-                            Date date1 = sdf.parse(time1);
-                            Date date2 = sdf.parse(time2);
-                            return date1.compareTo(date2); // Всегда по возрастанию времени
+                            SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                            Date dateDate1 = sdf.parse(date1);
+                            Date dateDate2 = sdf.parse(date2);
+                            int dateComparison = dateDate1.compareTo(dateDate2);
+                            if (dateComparison != 0) return dateComparison;
+                            String time1 = t1.getTime() != null ? t1.getTime() : "";
+                            String time2 = t2.getTime() != null ? t2.getTime() : "";
+                            if (time1.isEmpty() && time2.isEmpty()) return 0;
+                            if (time1.isEmpty()) return -1;
+                            if (time2.isEmpty()) return 1;
+                            try {
+                                SimpleDateFormat timeSdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                                Date timeDate1 = timeSdf.parse(time1);
+                                Date timeDate2 = timeSdf.parse(time2);
+                                return timeDate1.compareTo(timeDate2);
+                            } catch (ParseException e) {
+                                Log.e("AllTasksFragment", "Error parsing time in CATEGORY: " + time1 + " vs " + time2, e);
+                                return time1.compareTo(time2);
+                            }
                         } catch (ParseException e) {
-                            return time1.compareTo(time2);
+                            Log.e("AllTasksFragment", "Error parsing date in CATEGORY: " + date1 + " vs " + date2, e);
+                            return date1.compareTo(date2);
                         }
                     });
                     itemList.addAll(categoryTasks);
@@ -365,18 +381,49 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
                         }
                     }
                     Collections.sort(timeCategoryTasks, (t1, t2) -> {
-                        String time1 = t1.getTime() != null ? t1.getTime() : "";
-                        String time2 = t2.getTime() != null ? t2.getTime() : "";
-                        if (time1.isEmpty() && time2.isEmpty()) return 0;
-                        if (time1.isEmpty()) return -1;
-                        if (time2.isEmpty()) return 1;
+                        String date1 = t1.getDate() != null ? t1.getDate() : "";
+                        String date2 = t2.getDate() != null ? t2.getDate() : "";
+                        if (date1.isEmpty() && date2.isEmpty()) {
+                            String time1 = t1.getTime() != null ? t1.getTime() : "";
+                            String time2 = t2.getTime() != null ? t2.getTime() : "";
+                            if (time1.isEmpty() && time2.isEmpty()) return 0;
+                            if (time1.isEmpty()) return -1;
+                            if (time2.isEmpty()) return 1;
+                            try {
+                                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                                Date timeDate1 = sdf.parse(time1);
+                                Date timeDate2 = sdf.parse(time2);
+                                return timeDate1.compareTo(timeDate2);
+                            } catch (ParseException e) {
+                                Log.e("AllTasksFragment", "Error parsing time in TIME: " + time1 + " vs " + time2, e);
+                                return time1.compareTo(time2);
+                            }
+                        }
+                        if (date1.isEmpty()) return -1;
+                        if (date2.isEmpty()) return 1;
                         try {
-                            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-                            Date date1 = sdf.parse(time1);
-                            Date date2 = sdf.parse(time2);
-                            return sortAscending ? date1.compareTo(date2) : date2.compareTo(date1);
+                            SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                            Date dateDate1 = sdf.parse(date1);
+                            Date dateDate2 = sdf.parse(date2);
+                            int dateComparison = dateDate1.compareTo(dateDate2);
+                            if (dateComparison != 0) return dateComparison;
+                            String time1 = t1.getTime() != null ? t1.getTime() : "";
+                            String time2 = t2.getTime() != null ? t2.getTime() : "";
+                            if (time1.isEmpty() && time2.isEmpty()) return 0;
+                            if (time1.isEmpty()) return -1;
+                            if (time2.isEmpty()) return 1;
+                            try {
+                                SimpleDateFormat timeSdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                                Date timeDate1 = timeSdf.parse(time1);
+                                Date timeDate2 = timeSdf.parse(time2);
+                                return timeDate1.compareTo(timeDate2);
+                            } catch (ParseException e) {
+                                Log.e("AllTasksFragment", "Error parsing time in TIME: " + time1 + " vs " + time2, e);
+                                return time1.compareTo(time2);
+                            }
                         } catch (ParseException e) {
-                            return sortAscending ? time1.compareTo(time2) : time2.compareTo(time1);
+                            Log.e("AllTasksFragment", "Error parsing date in TIME: " + date1 + " vs " + date2, e);
+                            return date1.compareTo(date2);
                         }
                     });
                     itemList.addAll(timeCategoryTasks);
@@ -400,6 +447,7 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
                         Date date2 = sdf.parse(d2);
                         return sortAscending ? date1.compareTo(date2) : date2.compareTo(date1);
                     } catch (ParseException e) {
+                        Log.e("AllTasksFragment", "Error parsing date in DATE: " + d1 + " vs " + d2, e);
                         return sortAscending ? d1.compareTo(d2) : d2.compareTo(d1);
                     }
                 });
@@ -421,10 +469,11 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
                         if (time2.isEmpty()) return 1;
                         try {
                             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-                            Date date1 = sdf.parse(time1);
-                            Date date2 = sdf.parse(time2);
-                            return date1.compareTo(date2); // Всегда по возрастанию времени
+                            Date timeDate1 = sdf.parse(time1);
+                            Date timeDate2 = sdf.parse(time2);
+                            return timeDate1.compareTo(timeDate2);
                         } catch (ParseException e) {
+                            Log.e("AllTasksFragment", "Error parsing time in DATE: " + time1 + " vs " + time2, e);
                             return time1.compareTo(time2);
                         }
                     });
@@ -436,7 +485,52 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
                 Collections.sort(tasks, (t1, t2) -> {
                     int priority1 = t1.getPriority();
                     int priority2 = t2.getPriority();
-                    return sortAscending ? Integer.compare(priority2, priority1) : Integer.compare(priority1, priority2);
+                    int priorityComparison = sortAscending ? Integer.compare(priority2, priority1) : Integer.compare(priority1, priority2);
+                    if (priorityComparison != 0) return priorityComparison;
+                    String date1 = t1.getDate() != null ? t1.getDate() : "";
+                    String date2 = t2.getDate() != null ? t2.getDate() : "";
+                    if (date1.isEmpty() && date2.isEmpty()) {
+                        String time1 = t1.getTime() != null ? t1.getTime() : "";
+                        String time2 = t2.getTime() != null ? t2.getTime() : "";
+                        if (time1.isEmpty() && time2.isEmpty()) return 0;
+                        if (time1.isEmpty()) return -1;
+                        if (time2.isEmpty()) return 1;
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                            Date timeDate1 = sdf.parse(time1);
+                            Date timeDate2 = sdf.parse(time2);
+                            return timeDate1.compareTo(timeDate2);
+                        } catch (ParseException e) {
+                            Log.e("AllTasksFragment", "Error parsing time in PRIORITY: " + time1 + " vs " + time2, e);
+                            return time1.compareTo(time2);
+                        }
+                    }
+                    if (date1.isEmpty()) return -1;
+                    if (date2.isEmpty()) return 1;
+                    try {
+                        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                        Date dateDate1 = sdf.parse(date1);
+                        Date dateDate2 = sdf.parse(date2);
+                        int dateComparison = dateDate1.compareTo(dateDate2);
+                        if (dateComparison != 0) return dateComparison;
+                        String time1 = t1.getTime() != null ? t1.getTime() : "";
+                        String time2 = t2.getTime() != null ? t2.getTime() : "";
+                        if (time1.isEmpty() && time2.isEmpty()) return 0;
+                        if (time1.isEmpty()) return -1;
+                        if (time2.isEmpty()) return 1;
+                        try {
+                            SimpleDateFormat timeSdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                            Date timeDate1 = timeSdf.parse(time1);
+                            Date timeDate2 = timeSdf.parse(time2);
+                            return timeDate1.compareTo(timeDate2);
+                        } catch (ParseException e) {
+                            Log.e("AllTasksFragment", "Error parsing time in PRIORITY: " + time1 + " vs " + time2, e);
+                            return time1.compareTo(time2);
+                        }
+                    } catch (ParseException e) {
+                        Log.e("AllTasksFragment", "Error parsing date in PRIORITY: " + date1 + " vs " + date2, e);
+                        return date1.compareTo(date2);
+                    }
                 });
                 itemList.addAll(tasks);
                 break;
@@ -450,7 +544,7 @@ public class AllTasksFragment extends Fragment implements OnTaskUpdatedListener 
     private void checkTasks() {
         if (itemList.isEmpty()) {
             Random random = new Random();
-            String message = ALL_TASKS_NO_TASK_MESSAGES[random.nextInt(ALL_TASKS_NO_TASK_MESSAGES.length)];
+            String message = NO_TASK_MESSAGES[random.nextInt(NO_TASK_MESSAGES.length)];
             emptyTextView.setText(message);
             emptyTextView.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.GONE);

@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
         todayFilterAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, todayFilterOptions);
         todayFilterAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
-        String[] allTasksFilterOptions = {"По категориям", "По времени", "По дате", "По приоритету"};
+        String[] allTasksFilterOptions = {"По категориям", "По дате", "По приоритету"};
         allTasksFilterAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, allTasksFilterOptions);
         allTasksFilterAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
@@ -139,12 +139,9 @@ public class MainActivity extends AppCompatActivity {
                             filterType = FilterType.CATEGORY;
                             break;
                         case 1:
-                            filterType = FilterType.TIME;
-                            break;
-                        case 2:
                             filterType = FilterType.DATE;
                             break;
-                        case 3:
+                        case 2:
                             filterType = FilterType.PRIORITY;
                             break;
                         default:
@@ -210,14 +207,11 @@ public class MainActivity extends AppCompatActivity {
                     case CATEGORY:
                         position = 0;
                         break;
-                    case TIME:
+                    case DATE:
                         position = 1;
                         break;
-                    case DATE:
-                        position = 2;
-                        break;
                     case PRIORITY:
-                        position = 3;
+                        position = 2;
                         break;
                     default:
                         position = 0;
@@ -353,7 +347,7 @@ public class MainActivity extends AppCompatActivity {
             b.textToday.setVisibility(View.VISIBLE);
             b.textActiveW.setVisibility(View.VISIBLE);
             b.textDone.setVisibility(View.VISIBLE);
-            b.tvTitle.setText("Все задачи");
+            b.tvTitle.setText("Предстоящее");
         } else if (imageText.equals("DoneFragment")) {
             imageClean();
             b.imageToday.setVisibility(View.VISIBLE);
